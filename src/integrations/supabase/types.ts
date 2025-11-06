@@ -201,6 +201,27 @@ export type Database = {
           },
         ]
       }
+      search_logs: {
+        Row: {
+          created_at: string
+          id: string
+          search_query: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          search_query: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          search_query?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shared_posts: {
         Row: {
           created_at: string
@@ -229,6 +250,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transactions: {
+        Row: {
+          amount: string
+          chain_id: number
+          created_at: string
+          from_address: string
+          id: string
+          status: string
+          to_address: string
+          token_address: string | null
+          token_symbol: string
+          tx_hash: string
+          user_id: string
+        }
+        Insert: {
+          amount: string
+          chain_id: number
+          created_at?: string
+          from_address: string
+          id?: string
+          status?: string
+          to_address: string
+          token_address?: string | null
+          token_symbol: string
+          tx_hash: string
+          user_id: string
+        }
+        Update: {
+          amount?: string
+          chain_id?: number
+          created_at?: string
+          from_address?: string
+          id?: string
+          status?: string
+          to_address?: string
+          token_address?: string | null
+          token_symbol?: string
+          tx_hash?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

@@ -112,8 +112,16 @@ export const EditProfile = () => {
         return;
       }
 
-      setUploadingCover(true);
       const file = event.target.files[0];
+
+      // Validate file size (max 5MB)
+      const MAX_SIZE = 5 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        toast.error('File quá lớn! Vui lòng chọn file dưới 5MB');
+        return;
+      }
+
+      setUploadingCover(true);
 
       if (!userId) throw new Error('No user found');
 

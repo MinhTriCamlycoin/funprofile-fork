@@ -1,9 +1,9 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { mainnet, sepolia, bsc, bscTestnet } from 'wagmi/chains';
+import { mainnet, bsc } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
-  appName: 'Web3 Social',
-  projectId: 'YOUR_PROJECT_ID', // Get from WalletConnect Cloud
-  chains: [mainnet, sepolia, bsc, bscTestnet],
+  appName: 'F.U. Profile',
+  projectId: '21fef48091f12692cad574a6f7753643',
+  chains: [mainnet, bsc],
   ssr: false,
 });

@@ -1,37 +1,38 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAccount, useSendTransaction, useChainId } from 'wagmi';
+import { parseEther } from 'viem';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAccount, useSendTransaction } from 'wagmi';
-import { parseEther } from 'viem';
 import { toast } from 'sonner';
 import { validateEvmAddress } from '@/utils/walletValidation';
+import { supabase } from '@/integrations/supabase/client';
 
-export const SendCrypto = () => {
+export const SendTab = () => {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { sendTransaction, isPending } = useSendTransaction();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
-  const { sendTransaction, isPending } = useSendTransaction();
+  const nativeToken = chainId === 1 ? 'ETH' : 'BNB';
 
   const handleSend = async () => {
     if (!isConnected || !address) {
-      toast.error('Please connect your wallet first');
+      toast.error('Vui lòng kết nối ví trước');
       return;
     }
 
     if (!recipient || !amount) {
-      toast.error('Please fill in all fields');
+      toast.error('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
-    // Validate recipient address
     if (!validateEvmAddress(recipient)) {
-      return; // validateEvmAddress already shows error toast
+      return;
     }
 
-    // Confirm transaction
-    const confirmMessage = `Send ${amount} ETH/BNB to ${recipient.slice(0, 6)}...${recipient.slice(-4)}?`;
+    const confirmMessage = `Gửi ${amount} ${nativeToken} đến ${recipient.slice(0, 6)}...${recipient.slice(-4)}?`;
     if (!window.confirm(confirmMessage)) {
       return;
     }
@@ -43,30 +44,45 @@ export const SendCrypto = () => {
           value: parseEther(amount),
         },
         {
-          onSuccess: () => {
-            toast.success('Transaction sent successfully!');
+          onSuccess: async (hash) => {
+            toast.success('Giao dịch đã được gửi!');
+            
+            // Save transaction to database
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase.from('transactions').insert({
+                user_id: user.id,
+                tx_hash: hash,
+                from_address: address,
+                to_address: recipient,
+                amount: amount,
+                token_symbol: nativeToken,
+                chain_id: chainId,
+                status: 'pending'
+              });
+            }
+            
             setRecipient('');
             setAmount('');
           },
           onError: (error) => {
-            toast.error(error.message || 'Transaction failed');
+            toast.error(error.message || 'Giao dịch thất bại');
           },
         }
       );
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send transaction');
+      toast.error(error.message || 'Không thể gửi giao dịch');
     }
   };
 
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader>
-        <CardTitle>Send Crypto</CardTitle>
-        <CardDescription>Send ETH or BNB to any address</CardDescription>
+        <CardTitle>Gửi {nativeToken}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="recipient">Recipient Address</Label>
+          <Label htmlFor="recipient">Địa chỉ người nhận</Label>
           <Input
             id="recipient"
             placeholder="0x..."
@@ -74,8 +90,9 @@ export const SendCrypto = () => {
             onChange={(e) => setRecipient(e.target.value)}
           />
         </div>
+        
         <div className="space-y-2">
-          <Label htmlFor="amount">Amount</Label>
+          <Label htmlFor="amount">Số lượng ({nativeToken})</Label>
           <Input
             id="amount"
             type="number"
@@ -85,12 +102,13 @@ export const SendCrypto = () => {
             onChange={(e) => setAmount(e.target.value)}
           />
         </div>
+        
         <Button
           onClick={handleSend}
           disabled={!isConnected || isPending}
           className="w-full"
         >
-          {isPending ? 'Sending...' : 'Send'}
+          {isPending ? 'Đang gửi...' : 'Gửi'}
         </Button>
       </CardContent>
     </Card>
