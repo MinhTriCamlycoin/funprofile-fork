@@ -27,9 +27,12 @@ export const Navbar = () => {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            Web3 Social
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src="/logo.jpg" alt="F.U. Profile" className="w-10 h-10 rounded-full" />
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+              F.U. Profile
+            </h1>
+          </div>
           <div className="hidden md:flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
               <Home className="w-4 h-4 mr-2" />

@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { ImagePlus, Video, X, Loader2 } from 'lucide-react';
 
 interface CreatePostProps {
   onPostCreated: () => void;
@@ -16,28 +16,48 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [video, setVideo] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be less than 5MB');
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Image must be less than 10MB');
         return;
       }
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
+      setVideo(null);
+      setVideoPreview(null);
     }
   };
 
-  const removeImage = () => {
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('Video must be less than 50MB');
+        return;
+      }
+      setVideo(file);
+      setVideoPreview(URL.createObjectURL(file));
+      setImage(null);
+      setImagePreview(null);
+    }
+  };
+
+  const removeMedia = () => {
     setImage(null);
     setImagePreview(null);
+    setVideo(null);
+    setVideoPreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() && !image) {
-      toast.error('Please add some content or an image');
+    if (!content.trim() && !image && !video) {
+      toast.error('Please add some content, image, or video');
       return;
     }
 
@@ -47,6 +67,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
       if (!user) throw new Error('Not authenticated');
 
       let imageUrl = null;
+      let videoUrl = null;
 
       // Upload image if present
       if (image) {
@@ -66,10 +87,29 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
         imageUrl = publicUrl;
       }
 
+      // Upload video if present
+      if (video) {
+        const fileExt = video.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('videos')
+          .upload(fileName, video);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('videos')
+          .getPublicUrl(fileName);
+        
+        videoUrl = publicUrl;
+      }
+
       const { error } = await supabase.from('posts').insert({
         user_id: user.id,
         content: content.trim() || '',
         image_url: imageUrl,
+        video_url: videoUrl,
       });
 
       if (error) throw error;
@@ -77,6 +117,8 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
       setContent('');
       setImage(null);
       setImagePreview(null);
+      setVideo(null);
+      setVideoPreview(null);
       toast.success('Post created!');
       onPostCreated();
     } catch (error: any) {
@@ -109,7 +151,27 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
               variant="destructive"
               size="icon"
               className="absolute top-2 right-2"
-              onClick={removeImage}
+              onClick={removeMedia}
+              disabled={loading}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {videoPreview && (
+          <div className="relative inline-block">
+            <video 
+              src={videoPreview} 
+              controls
+              className="max-h-64 rounded-lg border"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute top-2 right-2"
+              onClick={removeMedia}
               disabled={loading}
             >
               <X className="w-4 h-4" />
@@ -118,7 +180,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
         )}
 
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex gap-2">
             <Input
               id="image-upload"
               type="file"
@@ -137,8 +199,27 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
               <ImagePlus className="w-4 h-4 mr-2" />
               Photo
             </Button>
+            
+            <Input
+              id="video-upload"
+              type="file"
+              accept="video/*"
+              onChange={handleVideoChange}
+              className="hidden"
+              disabled={loading}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => document.getElementById('video-upload')?.click()}
+              disabled={loading}
+            >
+              <Video className="w-4 h-4 mr-2" />
+              Video
+            </Button>
           </div>
-          <Button type="submit" disabled={loading || (!content.trim() && !image)}>
+          <Button type="submit" disabled={loading || (!content.trim() && !image && !video)}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {loading ? 'Posting...' : 'Post'}
           </Button>

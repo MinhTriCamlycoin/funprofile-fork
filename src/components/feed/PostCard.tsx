@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, Trash2, Share2, MessageCircle } from 'lucide-react';
+import { Heart, Trash2, Share2, MessageCircle, Repeat2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { CommentSection } from './CommentSection';
@@ -15,6 +15,7 @@ interface PostCardProps {
     id: string;
     content: string;
     image_url: string | null;
+    video_url?: string | null;
     created_at: string;
     user_id: string;
     profiles: {
@@ -36,6 +37,7 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
   const [likeCount, setLikeCount] = useState(post.reactions.length);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [commentCount, setCommentCount] = useState(post.comments.length);
+  const [showComments, setShowComments] = useState(false);
 
   const handleLike = async () => {
     try {
@@ -76,6 +78,20 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
     toast.success('Link copied to clipboard!');
   };
 
+  const handleRepost = async () => {
+    try {
+      const { error } = await supabase.from('shared_posts').insert({
+        user_id: currentUserId,
+        original_post_id: post.id,
+      });
+
+      if (error) throw error;
+      toast.success('Post shared to your profile!');
+    } catch (error: any) {
+      toast.error('Failed to share post');
+    }
+  };
+
   const handleProfileClick = () => {
     navigate(`/profile/${post.user_id}`);
   };
@@ -102,13 +118,31 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
         </CardHeader>
         <CardContent className="space-y-4">
           {post.content && <p className="whitespace-pre-wrap">{post.content}</p>}
+          
           {post.image_url && (
-            <img 
-              src={post.image_url} 
-              alt="Post content" 
-              className="w-full rounded-lg max-h-96 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setShowImageViewer(true)}
-            />
+            <>
+              <img
+                src={post.image_url}
+                alt="Post"
+                className="w-full max-w-[1920px] max-h-[1920px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity object-contain mx-auto"
+                onClick={() => setShowImageViewer(true)}
+              />
+              <ImageViewer
+                imageUrl={post.image_url}
+                isOpen={showImageViewer}
+                onClose={() => setShowImageViewer(false)}
+              />
+            </>
+          )}
+
+          {post.video_url && (
+            <video
+              controls
+              className="w-full max-w-[1920px] rounded-lg mx-auto"
+              src={post.video_url}
+            >
+              Your browser does not support video playback.
+            </video>
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
@@ -122,10 +156,20 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
               <Heart className={`w-4 h-4 mr-2 ${liked ? 'fill-current' : ''}`} />
               {likeCount}
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowComments(!showComments)}
+            >
               <MessageCircle className="w-4 h-4 mr-2" />
               {commentCount}
             </Button>
+            {post.user_id !== currentUserId && (
+              <Button variant="ghost" size="sm" onClick={handleRepost}>
+                <Repeat2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={handleShare}>
               <Share2 className="w-4 h-4" />
             </Button>
@@ -135,17 +179,11 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
               </Button>
             )}
           </div>
-          <CommentSection postId={post.id} onCommentAdded={() => setCommentCount(prev => prev + 1)} />
+          {showComments && (
+            <CommentSection postId={post.id} onCommentAdded={() => setCommentCount(prev => prev + 1)} />
+          )}
         </CardFooter>
       </Card>
-      
-      {post.image_url && (
-        <ImageViewer 
-          imageUrl={post.image_url} 
-          isOpen={showImageViewer} 
-          onClose={() => setShowImageViewer(false)} 
-        />
-      )}
     </>
   );
 };

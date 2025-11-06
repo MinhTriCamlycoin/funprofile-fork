@@ -7,6 +7,8 @@ import { SendCrypto } from '@/components/wallet/SendCrypto';
 import { SolanaWallet } from '@/components/wallet/SolanaWallet';
 import { SendSolana } from '@/components/wallet/SendSolana';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TokenManager } from '@/components/wallet/TokenManager';
+import { SolanaTokenManager } from '@/components/wallet/SolanaTokenManager';
 
 const Wallet = () => {
   const navigate = useNavigate();
@@ -45,10 +47,12 @@ const Wallet = () => {
           <TabsContent value="evm" className="space-y-6">
             <WalletConnect />
             <SendCrypto />
+            <TokenManager />
           </TabsContent>
           <TabsContent value="solana" className="space-y-6">
             <SolanaWallet />
             <SendSolana />
+            <SolanaTokenManager />
           </TabsContent>
         </Tabs>
       </main>
