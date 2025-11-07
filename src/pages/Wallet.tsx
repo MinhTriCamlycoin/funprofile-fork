@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/layout/Navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WalletHeader } from '@/components/wallet/WalletHeader';
-import { AssetsTab } from '@/components/wallet/AssetsTab';
+import { MetamaskHeader } from '@/components/wallet/MetamaskHeader';
+import { MetamaskAssetsTab } from '@/components/wallet/MetamaskAssetsTab';
 import { ReceiveTab } from '@/components/wallet/ReceiveTab';
 import { SendTab } from '@/components/wallet/SendTab';
 import { HistoryTab } from '@/components/wallet/HistoryTab';
@@ -34,24 +34,24 @@ const Wallet = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container max-w-4xl py-4 sm:py-8 px-4 sm:px-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-          Ví Web3 của bạn
-        </h1>
+      <main className="container max-w-md mx-auto py-4 sm:py-6 px-4">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <img 
+              src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" 
+              alt="MetaMask" 
+              className="w-8 h-8"
+            />
+            Web3 Wallet
+          </h1>
+        </div>
         
-        <div className="space-y-6">
-          <WalletHeader />
+        <div className="space-y-4">
+          <MetamaskHeader />
           
           <Tabs defaultValue="assets" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4 sm:mb-6">
-              <TabsTrigger value="assets">Tài sản</TabsTrigger>
-              <TabsTrigger value="receive">Nhận</TabsTrigger>
-              <TabsTrigger value="send">Gửi</TabsTrigger>
-              <TabsTrigger value="history">Lịch sử</TabsTrigger>
-            </TabsList>
-            
             <TabsContent value="assets">
-              <AssetsTab />
+              <MetamaskAssetsTab />
             </TabsContent>
             
             <TabsContent value="receive">
@@ -66,6 +66,31 @@ const Wallet = () => {
               <HistoryTab />
             </TabsContent>
           </Tabs>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-3 gap-2 pt-4">
+            <button 
+              onClick={() => document.querySelector('[value="receive"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}
+              className="p-3 rounded-lg border bg-card hover:bg-accent/10 transition-colors text-center"
+            >
+              <div className="text-2xl mb-1">📥</div>
+              <p className="text-xs font-medium">Nhận</p>
+            </button>
+            <button 
+              onClick={() => document.querySelector('[value="send"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}
+              className="p-3 rounded-lg border bg-card hover:bg-accent/10 transition-colors text-center"
+            >
+              <div className="text-2xl mb-1">📤</div>
+              <p className="text-xs font-medium">Gửi</p>
+            </button>
+            <button 
+              onClick={() => document.querySelector('[value="history"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}
+              className="p-3 rounded-lg border bg-card hover:bg-accent/10 transition-colors text-center"
+            >
+              <div className="text-2xl mb-1">📜</div>
+              <p className="text-xs font-medium">Lịch sử</p>
+            </button>
+          </div>
         </div>
       </main>
     </div>

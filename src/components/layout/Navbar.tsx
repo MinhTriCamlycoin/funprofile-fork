@@ -27,13 +27,12 @@ export const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4">
+      <div className="container flex h-16 sm:h-20 items-center justify-between px-3 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-1">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <img src="/fun-profile-logo.jpg" alt="FUN Profile" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0" />
-            <h1 className="text-base sm:text-2xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent truncate">
-              <span className="hidden sm:inline">FUN Profile</span>
-              <span className="sm:hidden">FUN</span>
+            <img src="/fun-profile-logo.jpg" alt="FUN Profile" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0 ring-2 ring-primary/20" />
+            <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent whitespace-nowrap">
+              FUN Profile
             </h1>
           </div>
           <div className="hidden md:flex items-center gap-2">
