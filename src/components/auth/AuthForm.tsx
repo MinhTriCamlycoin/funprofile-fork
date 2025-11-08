@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ const authSchema = z.object({
 });
 
 export const AuthForm = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -116,14 +118,32 @@ export const AuthForm = () => {
             {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Sign Up'}
           </Button>
         </form>
-        <div className="mt-4 text-center text-sm">
-          <button
+        <div className="mt-4 space-y-3">
+          <div className="text-center text-sm">
+            <button
+              type="button"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-primary hover:underline"
+            >
+              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+            </button>
+          </div>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+          <Button
             type="button"
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-primary hover:underline"
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate('/')}
           >
-            {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-          </button>
+            Use without account
+          </Button>
         </div>
       </CardContent>
     </Card>
