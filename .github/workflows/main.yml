@@ -1,0 +1,26 @@
+name: Deploy to iNet Hosting
+
+on:
+  push:
+    branches: [ main ]    # hoặc master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Project (nếu cần)
+        run: |
+          npm install --legacy-peer-deps
+          npm run build
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}      # ví dụ: nethost-5411.inet.vn
+          username: ${{ secrets.FTP_USERNAME }}  # username cPanel của con
+          password: ${{ secrets.FTP_PASSWORD }}  # password cPanel
+          local-dir: ./dist/                     # hoặc ./build/ nếu dùng khác
+          server-dir: /public_html/              # đúng thư mục fun.rich
+          dangerous-clean-slate: true            # xóa hết rồi up mới (khuyên dùng)
