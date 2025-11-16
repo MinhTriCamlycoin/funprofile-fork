@@ -31,104 +31,93 @@ export const HonorBoard = () => {
 
   const fetchLeaderboards = async () => {
     try {
-      // Fetch top users by posts count
-      const { data: postsData } = await supabase
-        .from('posts')
-        .select('user_id, profiles!inner(id, username, avatar_url)')
-        .order('created_at', { ascending: false });
+      // Fetch all users with their data
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url');
 
-      // Fetch top users by comments count
-      const { data: commentsData } = await supabase
-        .from('comments')
-        .select('user_id, profiles!inner(id, username, avatar_url)')
-        .order('created_at', { ascending: false });
+      if (!profiles) return;
 
-      // Fetch top users by reactions count
-      const { data: reactionsData } = await supabase
-        .from('reactions')
-        .select('user_id, profiles!inner(id, username, avatar_url)')
-        .order('created_at', { ascending: false });
+      // Calculate rewards for each user
+      const usersWithRewards = await Promise.all(
+        profiles.map(async (profile) => {
+          // Fetch posts
+          const { data: posts } = await supabase
+            .from('posts')
+            .select('id')
+            .eq('user_id', profile.id);
 
-      // Aggregate posts data
-      const postsMap = new Map<string, LeaderboardUser>();
-      postsData?.forEach((post: any) => {
-        const profile = post.profiles;
-        if (profile) {
-          const existing = postsMap.get(profile.id) || {
+          // Fetch comments count
+          const { count: commentsCount } = await supabase
+            .from('comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id);
+
+          // Fetch reactions count
+          const { count: reactionsCount } = await supabase
+            .from('reactions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id);
+
+          // Fetch friends count
+          const { count: friendsCount } = await supabase
+            .from('friendships')
+            .select('*', { count: 'exact', head: true })
+            .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`)
+            .eq('status', 'accepted');
+
+          // Fetch shared posts count
+          const { count: sharedCount } = await supabase
+            .from('shared_posts')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id);
+
+          // Calculate total reward
+          let totalReward = 50000; // New user bonus
+          const postsCount = posts?.length || 0;
+          totalReward += postsCount * 10000; // Posts reward
+          totalReward += (commentsCount || 0) * 5000; // Comments reward
+          totalReward += (friendsCount || 0) * 50000; // Friends reward
+          totalReward += (sharedCount || 0) * 20000; // Shared posts reward
+
+          // Reactions on posts reward
+          if (posts && posts.length > 0) {
+            for (const post of posts) {
+              const { count: postReactionsCount } = await supabase
+                .from('reactions')
+                .select('*', { count: 'exact', head: true })
+                .eq('post_id', post.id);
+
+              const reactionsOnPost = postReactionsCount || 0;
+              if (reactionsOnPost >= 3) {
+                totalReward += 30000 + (reactionsOnPost - 3) * 1000;
+              }
+            }
+          }
+
+          return {
             id: profile.id,
             username: profile.username,
             avatar_url: profile.avatar_url,
-            posts_count: 0,
-            comments_count: 0,
-            reactions_count: 0,
-            friends_count: 0,
-            total_reward: 0,
+            posts_count: postsCount,
+            comments_count: commentsCount || 0,
+            reactions_count: reactionsCount || 0,
+            friends_count: friendsCount || 0,
+            total_reward: totalReward,
           };
-          existing.posts_count++;
-          postsMap.set(profile.id, existing);
-        }
-      });
+        })
+      );
 
-      // Aggregate comments data
-      const commentsMap = new Map<string, LeaderboardUser>();
-      commentsData?.forEach((comment: any) => {
-        const profile = comment.profiles;
-        if (profile) {
-          const existing = commentsMap.get(profile.id) || {
-            id: profile.id,
-            username: profile.username,
-            avatar_url: profile.avatar_url,
-            posts_count: 0,
-            comments_count: 0,
-            reactions_count: 0,
-            friends_count: 0,
-            total_reward: 0,
-          };
-          existing.comments_count++;
-          commentsMap.set(profile.id, existing);
-        }
-      });
-
-      // Aggregate reactions data
-      const reactionsMap = new Map<string, LeaderboardUser>();
-      reactionsData?.forEach((reaction: any) => {
-        const profile = reaction.profiles;
-        if (profile) {
-          const existing = reactionsMap.get(profile.id) || {
-            id: profile.id,
-            username: profile.username,
-            avatar_url: profile.avatar_url,
-            posts_count: 0,
-            comments_count: 0,
-            reactions_count: 0,
-            friends_count: 0,
-            total_reward: 0,
-          };
-          existing.reactions_count++;
-          reactionsMap.set(profile.id, existing);
-        }
-      });
-
-      // Convert to arrays and sort
-      const topPostsUsers = Array.from(postsMap.values())
-        .sort((a, b) => b.posts_count - a.posts_count)
-        .slice(0, 5);
-      
-      const topCommentsUsers = Array.from(commentsMap.values())
-        .sort((a, b) => b.comments_count - a.comments_count)
-        .slice(0, 5);
-      
-      const topReactionsUsers = Array.from(reactionsMap.values())
-        .sort((a, b) => b.reactions_count - a.reactions_count)
+      // Sort by total reward and get top 5
+      const topRewardsUsers = usersWithRewards
+        .sort((a, b) => b.total_reward - a.total_reward)
         .slice(0, 5);
 
-      setTopPosts(topPostsUsers);
-      setTopComments(topCommentsUsers);
-      setTopReactions(topReactionsUsers);
-      
-      // For now, Friends and Rewards are placeholders (future implementation)
+      setTopRewards(topRewardsUsers);
+      setTopPosts([]);
+      setTopComments([]);
+      setTopReactions([]);
       setTopFriends([]);
-      setTopRewards([]);
     } catch (error) {
       console.error('Error fetching leaderboards:', error);
     } finally {
@@ -142,114 +131,72 @@ export const HonorBoard = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-2">
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
-  const StatRow = ({ icon, label, value, user }: { icon: React.ReactNode; label: string; value: number; user?: LeaderboardUser }) => (
+  const UserRow = ({ user, rank }: { user: LeaderboardUser; rank: number }) => (
     <div 
-      onClick={() => user && handleUserClick(user.id)}
-      className="relative border-2 border-yellow-500 rounded-xl p-4 bg-gradient-to-r from-green-800/50 to-green-700/50 backdrop-blur-sm hover:from-green-700/60 hover:to-green-600/60 transition-all cursor-pointer group"
+      onClick={() => handleUserClick(user.id)}
+      className="relative border border-yellow-500 rounded-lg p-2 bg-gradient-to-r from-green-800/50 to-green-700/50 backdrop-blur-sm hover:from-green-700/60 hover:to-green-600/60 transition-all cursor-pointer"
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="text-yellow-400">
-            {icon}
-          </div>
-          <span className="text-yellow-400 font-bold text-lg uppercase tracking-wide">{label}</span>
-        </div>
-        <span className="text-white font-bold text-2xl">{value.toLocaleString()}</span>
-      </div>
-      {user && (
-        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-yellow-500/30">
-          <Avatar className="w-6 h-6 border-2 border-yellow-400/50">
+        <div className="flex items-center gap-2">
+          <span className="text-yellow-400 font-bold text-lg w-6">{rank}</span>
+          <Avatar className="w-6 h-6 border border-yellow-400">
             <AvatarImage src={user.avatar_url} />
             <AvatarFallback className="text-xs bg-yellow-500 text-black">
               {user.username?.[0]?.toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-yellow-200 text-sm font-medium">{user.username}</span>
+          <span className="text-white text-sm font-medium">{user.username}</span>
         </div>
-      )}
+        <span className="text-yellow-400 font-bold text-sm">{user.total_reward.toLocaleString()}</span>
+      </div>
     </div>
   );
 
   return (
-    <div className="relative rounded-3xl overflow-hidden border-4 border-yellow-500 bg-gradient-to-br from-green-600 via-green-700 to-green-800 shadow-2xl">
+    <div className="sticky top-20 rounded-2xl overflow-hidden border-2 border-yellow-500 bg-gradient-to-br from-green-600 via-green-700 to-green-800 shadow-xl">
       {/* Sparkle effects */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-4 left-4 w-2 h-2 bg-white rounded-full animate-pulse"></div>
-        <div className="absolute top-8 right-8 w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-        <div className="absolute bottom-12 left-12 w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-8 right-16 w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
+        <div className="absolute top-2 left-2 w-1 h-1 bg-white rounded-full animate-pulse"></div>
+        <div className="absolute top-4 right-4 w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        <div className="absolute bottom-6 left-6 w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-4 right-8 w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '1.5s' }}></div>
       </div>
 
-      <div className="relative p-6 space-y-4">
+      <div className="relative p-3 space-y-2">
         {/* Header with logo */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-1">
           <div className="inline-block">
             <div className="relative">
               <img 
                 src="/fun-profile-logo.jpg" 
                 alt="Fun Profile Web3"
-                className="w-20 h-20 mx-auto rounded-full border-2 border-yellow-400 shadow-lg"
+                className="w-12 h-12 mx-auto rounded-full border border-yellow-400 shadow-lg"
               />
             </div>
           </div>
           
-          {/* User info (only show on profile page) */}
-          {topPosts[0] && (
-            <div className="flex items-center justify-center gap-3">
-              <h2 className="text-white text-2xl font-bold tracking-wide">{topPosts[0].username.toUpperCase()}</h2>
-              <Avatar className="w-12 h-12 border-3 border-yellow-400">
-                <AvatarImage src={topPosts[0].avatar_url} />
-                <AvatarFallback className="bg-yellow-500 text-black font-bold">
-                  {topPosts[0].username?.[0]?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          )}
-          
-          <h1 className="text-yellow-400 text-4xl font-black tracking-wider drop-shadow-lg">
+          <h1 className="text-yellow-400 text-xl font-black tracking-wider drop-shadow-lg">
             HONOR BOARD
           </h1>
+          <p className="text-yellow-200 text-xs font-medium">TOP 5 TOTAL REWARD</p>
         </div>
 
-        {/* Stats */}
-        <div className="space-y-3">
-          <StatRow 
-            icon={<ArrowUp className="w-6 h-6" />}
-            label="POSTS"
-            value={topPosts[0]?.posts_count || 0}
-            user={topPosts[0]}
-          />
-          <StatRow 
-            icon={<MessageCircle className="w-6 h-6" />}
-            label="COMMENTS"
-            value={topComments[0]?.comments_count || 0}
-            user={topComments[0]}
-          />
-          <StatRow 
-            icon={<Star className="w-6 h-6" />}
-            label="REACTIONS"
-            value={topReactions[0]?.reactions_count || 0}
-            user={topReactions[0]}
-          />
-          <StatRow 
-            icon={<Users className="w-6 h-6" />}
-            label="FRIENDS"
-            value={topFriends[0]?.friends_count || 0}
-            user={topFriends[0]}
-          />
-          <StatRow 
-            icon={<BadgeDollarSign className="w-6 h-6" />}
-            label="TOTAL REWARD"
-            value={topRewards[0]?.total_reward || 0}
-            user={topRewards[0]}
-          />
+        {/* Top 5 Users */}
+        <div className="space-y-2">
+          {topRewards.map((user, index) => (
+            <UserRow key={user.id} user={user} rank={index + 1} />
+          ))}
+          {topRewards.length === 0 && (
+            <div className="text-center py-4 text-yellow-200 text-sm">
+              No data available yet
+            </div>
+          )}
         </div>
       </div>
     </div>
