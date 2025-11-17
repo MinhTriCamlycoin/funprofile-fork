@@ -197,21 +197,18 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
-                  <Share2 className="w-4 h-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">{shareCount}</span>
-                  <span className="sm:hidden">{shareCount}</span>
+                <Button variant="ghost" size="sm" className="text-xs sm:text-sm gap-1">
+                  <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {shareCount > 0 && <span>{shareCount}</span>}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuItem onClick={handleCopyLink}>
                   Sao chép link
                 </DropdownMenuItem>
-                {currentUserId && post.user_id !== currentUserId && (
-                  <DropdownMenuItem onClick={handleShareToProfile}>
-                    Share về profile
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem onClick={handleShareToProfile}>
+                  Share về profile
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             {post.user_id === currentUserId && (
