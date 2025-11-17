@@ -17,6 +17,7 @@ const Profile = () => {
   const { userId } = useParams();
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [sharedPosts, setSharedPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [isOwnProfile, setIsOwnProfile] = useState(false);
@@ -88,6 +89,23 @@ const Profile = () => {
         .order('created_at', { ascending: false });
 
       setPosts(postsData || []);
+
+      // Fetch shared posts
+      const { data: sharedPostsData } = await supabase
+        .from('shared_posts')
+        .select(`
+          *,
+          posts:original_post_id (
+            *,
+            profiles (username, avatar_url),
+            reactions (id, user_id),
+            comments (id)
+          )
+        `)
+        .eq('user_id', profileId)
+        .order('created_at', { ascending: false });
+
+      setSharedPosts(sharedPostsData || []);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -162,21 +180,37 @@ const Profile = () => {
             {isOwnProfile && <TabsTrigger value="edit" className="text-xs sm:text-sm py-2">Edit Profile</TabsTrigger>}
           </TabsList>
           <TabsContent value="posts" className="space-y-4 mt-6">
-            {posts.length === 0 ? (
+            {posts.length === 0 && sharedPosts.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   No posts yet
                 </CardContent>
               </Card>
             ) : (
-              posts.map((post) => (
-                <PostCard 
-                  key={post.id} 
-                  post={post} 
-                  currentUserId={currentUserId}
-                  onPostDeleted={handlePostDeleted}
-                />
-              ))
+              <>
+                {sharedPosts.map((sharedPost) => (
+                  sharedPost.posts && (
+                    <div key={sharedPost.id} className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground px-2">
+                        <span className="font-semibold text-primary">Đã share</span>
+                      </div>
+                      <PostCard 
+                        post={sharedPost.posts} 
+                        currentUserId={currentUserId}
+                        onPostDeleted={handlePostDeleted}
+                      />
+                    </div>
+                  )
+                ))}
+                {posts.map((post) => (
+                  <PostCard 
+                    key={post.id} 
+                    post={post} 
+                    currentUserId={currentUserId}
+                    onPostDeleted={handlePostDeleted}
+                  />
+                ))}
+              </>
             )}
           </TabsContent>
           {isOwnProfile && (
