@@ -19,24 +19,40 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_url: string | null
+          parent_comment_id: string | null
           post_id: string
           user_id: string
+          video_url: string | null
         }
         Insert: {
           content: string
           created_at?: string
           id?: string
+          image_url?: string | null
+          parent_comment_id?: string | null
           post_id: string
           user_id: string
+          video_url?: string | null
         }
         Update: {
           content?: string
           created_at?: string
           id?: string
+          image_url?: string | null
+          parent_comment_id?: string | null
           post_id?: string
           user_id?: string
+          video_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "comments_post_id_fkey"
             columns: ["post_id"]
@@ -191,32 +207,35 @@ export type Database = {
       }
       reactions: {
         Row: {
+          comment_id: string | null
           created_at: string
           id: string
-          post_id: string
+          post_id: string | null
           type: string
           user_id: string
         }
         Insert: {
+          comment_id?: string | null
           created_at?: string
           id?: string
-          post_id: string
+          post_id?: string | null
           type?: string
           user_id: string
         }
         Update: {
+          comment_id?: string | null
           created_at?: string
           id?: string
-          post_id?: string
+          post_id?: string | null
           type?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "reactions_post_id_fkey"
-            columns: ["post_id"]
+            foreignKeyName: "reactions_comment_id_fkey"
+            columns: ["comment_id"]
             isOneToOne: false
-            referencedRelation: "posts"
+            referencedRelation: "comments"
             referencedColumns: ["id"]
           },
           {
