@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -29,8 +29,6 @@ interface PostCardProps {
       username: string;
       avatar_url: string | null;
     };
-    reactions: { id: string; user_id: string }[];
-    comments: any[];
   };
   currentUserId: string;
   onPostDeleted: () => void;
@@ -38,37 +36,62 @@ interface PostCardProps {
 
 export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) => {
   const navigate = useNavigate();
-  const [liked, setLiked] = useState(
-    post.reactions.some((r) => r.user_id === currentUserId)
-  );
-  const [likeCount, setLikeCount] = useState(post.reactions.length);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
   const [showImageViewer, setShowImageViewer] = useState(false);
-  const [commentCount, setCommentCount] = useState(post.comments.length);
+  const [commentCount, setCommentCount] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [shareCount, setShareCount] = useState(0);
 
-  // Fetch share count
-  useState(() => {
-    const fetchShareCount = async () => {
-      const { count } = await supabase
+  // Fetch reactions and comments count
+  useEffect(() => {
+    const fetchPostData = async () => {
+      // Fetch reactions
+      const { data: reactions } = await supabase
+        .from('reactions')
+        .select('id, user_id')
+        .eq('post_id', post.id)
+        .is('comment_id', null);
+      
+      if (reactions) {
+        setLikeCount(reactions.length);
+        setLiked(reactions.some((r) => r.user_id === currentUserId));
+      }
+
+      // Fetch comments count
+      const { count: commentsCount } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', post.id);
+      
+      setCommentCount(commentsCount || 0);
+
+      // Fetch share count
+      const { count: sharesCount } = await supabase
         .from('shared_posts')
         .select('*', { count: 'exact', head: true })
         .eq('original_post_id', post.id);
-      setShareCount(count || 0);
+      
+      setShareCount(sharesCount || 0);
     };
-    fetchShareCount();
-  });
+
+    fetchPostData();
+  }, [post.id, currentUserId]);
 
   const handleLike = async () => {
     try {
       if (liked) {
-        const reaction = post.reactions.find((r) => r.user_id === currentUserId);
-        if (reaction) {
-          await supabase.from('reactions').delete().eq('id', reaction.id);
-          setLiked(false);
-          setLikeCount((prev) => prev - 1);
-        }
+        // Delete the reaction
+        await supabase
+          .from('reactions')
+          .delete()
+          .eq('post_id', post.id)
+          .eq('user_id', currentUserId)
+          .is('comment_id', null);
+        
+        setLiked(false);
+        setLikeCount((prev) => prev - 1);
       } else {
         await supabase.from('reactions').insert({
           post_id: post.id,
