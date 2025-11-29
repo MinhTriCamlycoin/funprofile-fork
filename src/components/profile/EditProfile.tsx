@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { AvatarCropper } from './AvatarCropper';
 import { z } from 'zod';
+import { compressImage, FILE_LIMITS } from '@/utils/imageCompression';
 
 const profileSchema = z.object({
   username: z.string()
@@ -136,9 +137,7 @@ export const EditProfile = () => {
 
       const file = event.target.files[0];
 
-      // Validate file size (max 5MB)
-      const MAX_SIZE = 5 * 1024 * 1024;
-      if (file.size > MAX_SIZE) {
+      if (file.size > FILE_LIMITS.IMAGE_MAX_SIZE) {
         toast.error('File quá lớn! Vui lòng chọn file dưới 5MB');
         return;
       }
@@ -147,12 +146,20 @@ export const EditProfile = () => {
 
       if (!userId) throw new Error('No user found');
 
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${userId}/${crypto.randomUUID()}.${fileExt}`;
+      // Compress cover image
+      toast.loading('Đang nén ảnh...');
+      const compressed = await compressImage(file, {
+        maxWidth: FILE_LIMITS.COVER_MAX_WIDTH,
+        maxHeight: FILE_LIMITS.COVER_MAX_HEIGHT,
+        quality: 0.85,
+      });
+      toast.dismiss();
+
+      const filePath = `${userId}/${crypto.randomUUID()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, compressed);
 
       if (uploadError) throw uploadError;
 

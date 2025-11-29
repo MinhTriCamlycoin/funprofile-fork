@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Image, Video, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { compressImage, FILE_LIMITS, getVideoDuration } from '@/utils/imageCompression';
 
 interface CommentMediaUploadProps {
   onMediaUploaded: (url: string, type: 'image' | 'video') => void;
@@ -21,12 +22,6 @@ export const CommentMediaUpload = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024; // 5MB for images, 50MB for videos
-    if (file.size > maxSize) {
-      toast.error(`File size must be less than ${type === 'image' ? '5MB' : '50MB'}`);
-      return;
-    }
-
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error('Please sign in to upload media');
@@ -36,12 +31,51 @@ export const CommentMediaUpload = ({
     setUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      let fileToUpload = file;
+
+      if (type === 'image') {
+        // Validate original size
+        if (file.size > FILE_LIMITS.IMAGE_MAX_SIZE) {
+          toast.error('Image must be less than 5MB');
+          setUploading(false);
+          return;
+        }
+
+        // Compress image
+        toast.loading('Compressing image...');
+        fileToUpload = await compressImage(file, {
+          maxWidth: FILE_LIMITS.POST_IMAGE_MAX_WIDTH,
+          maxHeight: FILE_LIMITS.POST_IMAGE_MAX_HEIGHT,
+          quality: 0.85,
+        });
+        toast.dismiss();
+      } else {
+        // Video validation
+        if (file.size > FILE_LIMITS.VIDEO_MAX_SIZE) {
+          toast.error('Video must be less than 20MB');
+          setUploading(false);
+          return;
+        }
+
+        // Check video duration
+        try {
+          const duration = await getVideoDuration(file);
+          if (duration > FILE_LIMITS.VIDEO_MAX_DURATION) {
+            toast.error('Video must be less than 3 minutes');
+            setUploading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Error checking video duration:', err);
+        }
+      }
+
+      const fileExt = type === 'image' ? 'jpg' : file.name.split('.').pop();
       const fileName = `${user.id}/${Math.random()}.${fileExt}`;
       
       const { data, error } = await supabase.storage
         .from('comment-media')
-        .upload(fileName, file);
+        .upload(fileName, fileToUpload);
 
       if (error) throw error;
 

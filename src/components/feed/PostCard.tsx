@@ -174,6 +174,7 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
               <img
                 src={post.image_url}
                 alt="Post"
+                loading="lazy"
                 className="w-full max-w-[1920px] max-h-[1920px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity object-contain mx-auto"
                 onClick={() => setShowImageViewer(true)}
               />
@@ -188,6 +189,7 @@ export const PostCard = ({ post, currentUserId, onPostDeleted }: PostCardProps) 
           {post.video_url && (
             <video
               controls
+              preload="metadata"
               className="w-full max-w-[1920px] rounded-lg mx-auto"
               src={post.video_url}
             >
