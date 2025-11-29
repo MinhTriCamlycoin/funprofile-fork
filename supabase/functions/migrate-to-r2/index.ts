@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const { data: posts } = await supabaseAdmin
       .from('posts')
       .select('image_url, video_url')
-      .limit(limit * 100); // Query many more to compensate for skipped large files
+      .limit(1000); // Query 1000 records to find enough small files
 
     if (posts) {
       for (const post of posts) {
@@ -165,8 +165,7 @@ Deno.serve(async (req) => {
         
         // Skip files larger than 10MB to avoid memory issues
         if (fileData.size > 10 * 1024 * 1024) {
-          console.log(`Skipping ${filePath}: File too large (${(fileData.size / 1024 / 1024).toFixed(2)}MB) - will retry later with smaller files`);
-          // Don't add to results, just skip silently so it doesn't count as an error
+          console.log(`Skipping ${filePath}: File too large (${(fileData.size / 1024 / 1024).toFixed(2)}MB)`);
           continue;
         }
         
