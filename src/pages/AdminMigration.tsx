@@ -14,6 +14,8 @@ const AdminMigration = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [results, setResults] = useState<any>(null);
+  const [autoRun, setAutoRun] = useState(false);
+  const [totalMigrated, setTotalMigrated] = useState(0);
 
   useEffect(() => {
     checkAdminAccess();
@@ -69,15 +71,30 @@ const AdminMigration = () => {
 
       setResults(data);
       
+      if (!dryRun && data.successful > 0) {
+        setTotalMigrated(prev => prev + data.successful);
+      }
+      
       if (dryRun) {
         toast.success('Test migration hoàn tất!');
       } else {
-        toast.success('Migration hoàn tất!');
+        toast.success(`Migration hoàn tất! Đã migrate ${data.successful} files.`);
+        
+        // Auto-run: if successful and there are more files, continue
+        if (autoRun && data.totalFiles > 0) {
+          setTimeout(() => {
+            runMigration(false);
+          }, 2000); // Wait 2 seconds before next batch
+        } else if (autoRun && data.totalFiles === 0) {
+          setAutoRun(false);
+          toast.success(`✅ Hoàn tất! Tổng cộng đã migrate ${totalMigrated} files.`);
+        }
       }
     } catch (error: any) {
       console.error('Migration error:', error);
       toast.error(error.message || 'Có lỗi xảy ra khi chạy migration');
       setResults({ error: error.message || 'Unknown error' });
+      setAutoRun(false); // Stop auto-run on error
     } finally {
       setMigrating(false);
     }
@@ -158,10 +175,50 @@ const AdminMigration = () => {
                   ⚠️ Migration chạy từng batch 5 files. Files &gt;10MB sẽ tự động skip. Chạy nhiều lần cho đến khi không còn files nào được migrate.
                 </AlertDescription>
               </Alert>
+              {totalMigrated > 0 && (
+                <Alert className="mb-4 bg-green-500/10 border-green-500/20">
+                  <AlertDescription className="text-green-600 font-semibold">
+                    📊 Tổng đã migrate: {totalMigrated} files
+                  </AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-3">
                 <Button
+                  onClick={() => {
+                    setAutoRun(true);
+                    setTotalMigrated(0);
+                    runMigration(false);
+                  }}
+                  disabled={migrating || autoRun}
+                  className="w-full bg-primary hover:bg-primary/90"
+                >
+                  {autoRun ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang Auto-Run... ({totalMigrated} files)
+                    </>
+                  ) : (
+                    <>
+                      <Database className="w-4 h-4 mr-2" />
+                      🚀 Auto-Run Migration (Chạy tự động)
+                    </>
+                  )}
+                </Button>
+                
+                {autoRun && (
+                  <Button
+                    onClick={() => setAutoRun(false)}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    ⏸️ Dừng Auto-Run
+                  </Button>
+                )}
+                
+                <Button
                   onClick={() => runMigration(false)}
-                  disabled={migrating}
+                  disabled={migrating || autoRun}
+                  variant="outline"
                   className="w-full"
                 >
                   {migrating ? (
@@ -176,7 +233,7 @@ const AdminMigration = () => {
                     </>
                   )}
                 </Button>
-                {results && !results.error && results.successful > 0 && (
+                {results && !results.error && results.successful > 0 && !autoRun && (
                   <Button
                     onClick={() => runMigration(false)}
                     disabled={migrating}
