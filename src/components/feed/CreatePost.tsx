@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ImagePlus, Video, X, Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { compressImage, FILE_LIMITS, getVideoDuration } from '@/utils/imageCompression';
 
 const postSchema = z.object({
   content: z.string().max(5000, 'Post must be less than 5000 characters'),
@@ -24,27 +25,52 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
   const [video, setVideo] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('Image must be less than 10MB');
+      if (file.size > FILE_LIMITS.IMAGE_MAX_SIZE) {
+        toast.error('Image must be less than 5MB');
         return;
       }
-      setImage(file);
-      setImagePreview(URL.createObjectURL(file));
-      setVideo(null);
-      setVideoPreview(null);
+      
+      try {
+        toast.loading('Compressing image...');
+        const compressed = await compressImage(file, {
+          maxWidth: FILE_LIMITS.POST_IMAGE_MAX_WIDTH,
+          maxHeight: FILE_LIMITS.POST_IMAGE_MAX_HEIGHT,
+          quality: 0.85,
+        });
+        toast.dismiss();
+        
+        setImage(compressed);
+        setImagePreview(URL.createObjectURL(compressed));
+        setVideo(null);
+        setVideoPreview(null);
+      } catch (error) {
+        toast.dismiss();
+        toast.error('Failed to process image');
+      }
     }
   };
 
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error('Video must be less than 50MB');
+      if (file.size > FILE_LIMITS.VIDEO_MAX_SIZE) {
+        toast.error('Video must be less than 20MB');
         return;
       }
+
+      try {
+        const duration = await getVideoDuration(file);
+        if (duration > FILE_LIMITS.VIDEO_MAX_DURATION) {
+          toast.error('Video must be less than 3 minutes');
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking video duration:', err);
+      }
+
       setVideo(file);
       setVideoPreview(URL.createObjectURL(file));
       setImage(null);
@@ -83,7 +109,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
 
       // Upload image if present
       if (image) {
-        const fileExt = image.name.split('.').pop()?.toLowerCase();
+        const fileExt = 'jpg'; // Always use jpg after compression
         const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
