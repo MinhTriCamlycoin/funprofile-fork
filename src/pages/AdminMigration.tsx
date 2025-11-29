@@ -60,7 +60,7 @@ const AdminMigration = () => {
       const { data, error } = await supabase.functions.invoke('migrate-to-r2', {
         body: {
           dryRun,
-          limit: dryRun ? 10 : 1000,
+          limit: 10,
           updateDatabase: !dryRun
         }
       });
@@ -146,39 +146,48 @@ const AdminMigration = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="w-5 h-5 text-primary" />
-                Full Migration
+                Full Migration (Batch Mode)
               </CardTitle>
               <CardDescription>
-                Migrate tất cả files và cập nhật database URLs. Hành động này không thể hoàn tác!
+                Migrate 10 files mỗi lần để tránh timeout. Chạy nhiều lần cho đến khi hết files.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Alert className="mb-4">
                 <AlertDescription>
-                  ⚠️ Hãy chắc chắn rằng bạn đã chạy test migration thành công trước khi chạy full migration!
+                  ⚠️ Migration chạy từng batch 10 files. Bạn cần chạy nhiều lần cho đến khi không còn files nào được migrate.
                 </AlertDescription>
               </Alert>
-              <Button
-                onClick={() => {
-                  if (confirm('Bạn có chắc chắn muốn migrate tất cả files? Hành động này không thể hoàn tác!')) {
-                    runMigration(false);
-                  }
-                }}
-                disabled={migrating}
-                className="w-full"
-              >
-                {migrating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Đang migrate...
-                  </>
-                ) : (
-                  <>
+              <div className="space-y-3">
+                <Button
+                  onClick={() => runMigration(false)}
+                  disabled={migrating}
+                  className="w-full"
+                >
+                  {migrating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang migrate batch...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="w-4 h-4 mr-2" />
+                      Chạy Migration Batch (10 files)
+                    </>
+                  )}
+                </Button>
+                {results && !results.error && results.successful > 0 && (
+                  <Button
+                    onClick={() => runMigration(false)}
+                    disabled={migrating}
+                    variant="outline"
+                    className="w-full"
+                  >
                     <Database className="w-4 h-4 mr-2" />
-                    Chạy Full Migration
-                  </>
+                    Tiếp tục Migration (Batch tiếp theo)
+                  </Button>
                 )}
-              </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -204,20 +213,34 @@ const AdminMigration = () => {
                   </Alert>
                 ) : (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-500">
+                          {results.totalFiles || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Tổng files</div>
+                      </div>
                       <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                         <div className="text-2xl font-bold text-green-500">
-                          {results.summary?.totalSuccess || 0}
+                          {results.successful || 0}
                         </div>
-                        <div className="text-sm text-muted-foreground">Files thành công</div>
+                        <div className="text-sm text-muted-foreground">Thành công</div>
                       </div>
                       <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                         <div className="text-2xl font-bold text-destructive">
-                          {results.summary?.totalErrors || 0}
+                          {results.errors || 0}
                         </div>
                         <div className="text-sm text-muted-foreground">Lỗi</div>
                       </div>
                     </div>
+                    
+                    {results.totalFiles === 0 && (
+                      <Alert>
+                        <AlertDescription>
+                          ✅ Không còn files nào cần migrate! Tất cả files đã được chuyển sang R2.
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
                     {results.results && results.results.length > 0 && (
                       <div className="space-y-2">

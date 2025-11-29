@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       throw new Error('Missing Cloudflare R2 configuration');
     }
 
-    const { bucket, limit = 50, dryRun = false, updateDatabase = true } = await req.json();
+    const { bucket, limit = 10, dryRun = false, updateDatabase = true } = await req.json();
     
     const results: MigrationResult[] = [];
 
