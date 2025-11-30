@@ -23,17 +23,19 @@ const About = () => {
       </div>
 
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-6 text-primary-dark hover:text-primary hover:bg-primary/10"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Quay lại
-        </Button>
+      <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+        <div className="container mx-auto px-4 h-full max-w-4xl">
+          <div className="scroll-container h-full pb-6">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="mb-6 text-primary-dark hover:text-primary hover:bg-primary/10"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Quay lại
+            </Button>
 
-        <Card className="bg-card border-border shadow-sm">
+            <Card className="glass-card-light border-2 border-gold">
           <CardHeader className="pb-3">
             <CardTitle className="text-2xl font-bold flex items-center gap-2">
               <Info className="w-6 h-6 text-primary" />
@@ -91,9 +93,11 @@ const About = () => {
             </div>
 
             <p className="pt-4 font-medium">Với F.U. Profile, bạn không chỉ tham gia một mạng xã hội Web3, mà còn bước vào một không gian số thông minh, nơi AI và blockchain kết hợp để biến mọi ý tưởng thành tài sản thực sự. Đây chính là tương lai của mạng xã hội – nơi giá trị cá nhân và tài sản trí tuệ được tối ưu hóa và bảo vệ mãi mãi.</p>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };

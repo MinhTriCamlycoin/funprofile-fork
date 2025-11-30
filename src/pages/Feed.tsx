@@ -59,7 +59,7 @@ const Feed = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative">
       {/* Video Background */}
       <div className="fixed inset-0 -z-10">
         <video
@@ -75,57 +75,57 @@ const Feed = () => {
 
       <Navbar />
       
-      <div className="container max-w-7xl mx-auto pt-24 pb-8 px-4 sm:px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr,380px] gap-6">
-          {/* Left Sidebar - Hidden on mobile */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-24">
+      <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+        <div className="container mx-auto px-4 h-full max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+            {/* Left Sidebar - Hidden on mobile */}
+            <aside className="hidden lg:block lg:col-span-3 scroll-container pb-6">
               <LeftSidebar />
+            </aside>
+
+            {/* Main Feed */}
+            <div className="lg:col-span-6 scroll-container pb-6">
+              <div className="space-y-6">
+                {currentUserId && <CreatePost onPostCreated={fetchPosts} />}
+                
+                {!currentUserId && (
+                  <div className="p-4 bg-white rounded-2xl text-center border-2 border-gold">
+                    <p className="text-sm text-primary font-medium">
+                      Đăng nhập để tạo bài viết và tương tác
+                    </p>
+                  </div>
+                )}
+                
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-48 w-full bg-white/5" />
+                    ))}
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-2xl border-2 border-gold">
+                    <p className="text-primary font-medium">Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!</p>
+                  </div>
+                ) : (
+                  posts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      currentUserId={currentUserId}
+                      onPostDeleted={fetchPosts}
+                    />
+                  ))
+                )}
+              </div>
             </div>
-          </aside>
 
-          {/* Main Feed */}
-          <main className="max-w-2xl mx-auto w-full">
-            {currentUserId && <CreatePost onPostCreated={fetchPosts} />}
-            
-            {!currentUserId && (
-              <div className="mb-6 p-4 bg-white rounded-2xl text-center border-2 border-gold">
-                <p className="text-sm text-primary font-medium">
-                  Đăng nhập để tạo bài viết và tương tác
-                </p>
-              </div>
-            )}
-            
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-48 w-full bg-white/5" />
-                ))}
-              </div>
-            ) : posts.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-2xl border-2 border-gold">
-                <p className="text-primary font-medium">Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!</p>
-              </div>
-            ) : (
-              posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  currentUserId={currentUserId}
-                  onPostDeleted={fetchPosts}
-                />
-              ))
-            )}
-          </main>
-
-          {/* Honor Board Sidebar - Hidden on mobile */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-24">
+            {/* Right Sidebar - Hidden on mobile */}
+            <aside className="hidden lg:block lg:col-span-3 scroll-container pb-6">
               <HonorBoard />
-            </div>
-          </aside>
+            </aside>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

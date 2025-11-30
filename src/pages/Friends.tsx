@@ -77,10 +77,14 @@ const Friends = () => {
       </div>
 
       <Navbar />
-      <main className="container max-w-4xl py-4 sm:py-8 px-4 sm:px-6">
-        <div className="glass-card-light p-6 rounded-2xl">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-foreground">Friends</h1>
-          <FriendsList userId={currentUserId} />
+      <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+        <div className="container mx-auto px-4 h-full max-w-4xl">
+          <div className="scroll-container h-full pb-6">
+            <div className="glass-card-light p-6 rounded-2xl">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-foreground">Friends</h1>
+              <FriendsList userId={currentUserId} />
+            </div>
+          </div>
         </div>
       </main>
     </div>

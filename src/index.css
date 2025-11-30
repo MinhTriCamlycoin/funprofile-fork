@@ -179,6 +179,31 @@ All colors MUST be HSL.
   border: 2px solid hsl(var(--gold));
 }
 
+/* Scroll Container for Sidebar/Content */
+.scroll-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--gold)) transparent;
+}
+
+.scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background: hsl(var(--gold));
+  border-radius: 3px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  background: hsl(51 100% 40%);
+}
+
 /* Audio Wave Bars */
 .audio-bar {
   animation: audio-wave 0.8s ease-in-out infinite;

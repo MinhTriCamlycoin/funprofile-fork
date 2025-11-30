@@ -26,7 +26,7 @@ const Auth = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4 py-8">
       {/* Space Video Background */}
       <video 
         autoPlay 
@@ -43,19 +43,19 @@ const Auth = () => {
       
       <div className="w-full max-w-md relative z-10">
         {/* Logo with Strong Halo Effect */}
-        <div className="text-center mb-16 relative">
+        <div className="text-center mb-8 relative">
           {/* Outer glow ring */}
-          <div className="absolute inset-0 flex items-center justify-center -top-8">
-            <div className="w-56 h-56 rounded-full bg-gradient-to-br from-yellow-400/60 via-emerald-400/50 to-yellow-500/60 blur-3xl animate-pulse" 
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-48 h-48 rounded-full bg-gradient-to-br from-yellow-400/60 via-emerald-400/50 to-yellow-500/60 blur-3xl animate-pulse" 
                  style={{ animation: 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />
           </div>
           {/* Inner glow ring */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-40 h-40 rounded-full bg-gradient-to-br from-emerald-300/70 via-yellow-400/60 to-emerald-300/70 blur-2xl" />
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-emerald-300/70 via-yellow-400/60 to-emerald-300/70 blur-2xl" />
           </div>
           {/* Logo */}
           <div className="relative z-10">
-            <div className="w-36 h-36 mx-auto rounded-full bg-gradient-to-br from-yellow-400/20 to-emerald-400/20 p-2 backdrop-blur-sm">
+            <div className="w-28 h-28 mx-auto rounded-full bg-gradient-to-br from-yellow-400/20 to-emerald-400/20 p-2 backdrop-blur-sm">
               <img 
                 src="/fun-profile-logo.jpg" 
                 alt="FUN Profile WEB3" 

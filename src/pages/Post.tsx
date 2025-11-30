@@ -68,14 +68,16 @@ const Post = () => {
           </video>
         </div>
 
-        <Navbar />
-        <div className="pt-20 px-4">
-          <div className="max-w-2xl mx-auto">
+      <Navbar />
+      <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+        <div className="container mx-auto px-4 h-full max-w-4xl">
+          <div className="scroll-container h-full pb-6">
             <Skeleton className="h-64 w-full" />
           </div>
         </div>
-      </div>
-    );
+      </main>
+    </div>
+  );
   }
 
   if (!post) {
@@ -95,15 +97,17 @@ const Post = () => {
         </div>
 
         <Navbar />
-        <div className="pt-20 px-4">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-4">Post không tồn tại</h2>
-            <Button onClick={() => navigate('/')}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Quay về trang chủ
-            </Button>
+        <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+          <div className="container mx-auto px-4 h-full flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-4 text-foreground">Post không tồn tại</h2>
+              <Button onClick={() => navigate('/')}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Quay về trang chủ
+              </Button>
+            </div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -124,23 +128,25 @@ const Post = () => {
       </div>
 
       <Navbar />
-      <div className="pt-20 px-4">
-        <div className="max-w-2xl mx-auto">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/')}
-            className="mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
-          </Button>
-          <PostCard
-            post={post}
-            currentUserId={currentUserId}
-            onPostDeleted={() => navigate('/')}
-          />
+      <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+        <div className="container mx-auto px-4 h-full max-w-2xl">
+          <div className="scroll-container h-full pb-6">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/')}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Quay lại
+            </Button>
+            <PostCard
+              post={post}
+              currentUserId={currentUserId}
+              onPostDeleted={() => navigate('/')}
+            />
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

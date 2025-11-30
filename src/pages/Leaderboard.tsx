@@ -146,14 +146,16 @@ const Leaderboard = () => {
       </div>
 
       <Navbar />
-      <div className="container max-w-4xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
-        <div className="glass-card-light p-6 rounded-2xl">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">🏆 Bảng Xếp Hạng Tổng Thưởng</h1>
-            <p className="text-muted-foreground">Danh sách người dùng có tổng Camly Coin cao nhất</p>
-          </div>
+      <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+        <div className="container mx-auto px-4 h-full max-w-4xl">
+          <div className="scroll-container h-full pb-6">
+            <div className="glass-card-light p-6 rounded-2xl">
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-foreground mb-2">🏆 Bảng Xếp Hạng Tổng Thưởng</h1>
+                <p className="text-muted-foreground">Danh sách người dùng có tổng Camly Coin cao nhất</p>
+              </div>
 
-        {loading ? (
+            {loading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-20 w-full" />
@@ -200,10 +202,12 @@ const Leaderboard = () => {
                 </div>
               );
             })}
+            </div>
+          )}
+            </div>
           </div>
-        )}
         </div>
-      </div>
+      </main>
     </div>
   );
 };

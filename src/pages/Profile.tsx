@@ -160,10 +160,11 @@ const Profile = () => {
       </div>
 
       <Navbar />
-      <main className="container max-w-7xl py-4 sm:py-8 px-4 sm:px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className="fixed top-28 left-0 right-0 bottom-0 overflow-hidden">
+        <div className="container mx-auto px-4 sm:px-6 h-full max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
           {/* Main Content - Left Side */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 scroll-container pb-6">
             <div className="mb-6 sm:mb-8">
               <Card className="overflow-hidden glass-card-light border-2 border-gold">
             {profile?.cover_url && (
@@ -253,12 +254,13 @@ const Profile = () => {
           </div>
 
           {/* Honor Board - Right Side */}
-          <div className="lg:col-span-4 hidden lg:block">
-            <ProfileHonorBoard 
+          <div className="lg:col-span-4 hidden lg:block scroll-container pb-6">
+            <ProfileHonorBoard
               userId={profile.id}
               username={profile.username}
               avatarUrl={profile.avatar_url}
             />
+          </div>
           </div>
         </div>
       </main>

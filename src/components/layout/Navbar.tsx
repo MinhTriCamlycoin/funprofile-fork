@@ -44,8 +44,8 @@ export const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4">
-      <nav className="max-w-7xl w-full bg-white rounded-full shadow-lg px-6 py-3 flex items-center justify-between">
+    <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-8 px-4">
+      <nav className="max-w-7xl w-full bg-white rounded-full shadow-lg px-6 py-3 flex items-center justify-between relative">
         {/* Left: Navigation Links */}
         <div className="flex items-center gap-2">
           <Button
@@ -78,13 +78,13 @@ export const Navbar = () => {
         </div>
 
         {/* Center: Logo */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-2">
+        <div className="absolute left-1/2 -translate-x-1/2 -top-6">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse-glow" />
             <img
               src="/fun-profile-logo.jpg"
               alt="FUN"
-              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl cursor-pointer hover:scale-110 transition-transform"
+              className="relative w-20 h-20 rounded-full border-4 border-white shadow-xl cursor-pointer hover:scale-110 transition-transform"
               onClick={() => navigate('/')}
             />
           </div>
