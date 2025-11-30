@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ['Orbitron', 'Space Grotesk', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -85,10 +89,45 @@ export default {
             height: "0",
           },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0px) translateX(0px)" },
+          "50%": { transform: "translateY(-20px) translateX(10px)" },
+        },
+        "twinkle": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
+        },
+        "nebula-drift": {
+          "0%": { transform: "translate(0, 0) scale(1)" },
+          "33%": { transform: "translate(30px, -30px) scale(1.1)" },
+          "66%": { transform: "translate(-20px, 20px) scale(0.95)" },
+          "100%": { transform: "translate(0, 0) scale(1)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { 
+            boxShadow: "0 0 20px hsl(145 100% 50% / 0.5), 0 0 40px hsl(145 100% 50% / 0.3)"
+          },
+          "50%": { 
+            boxShadow: "0 0 30px hsl(145 100% 50% / 0.8), 0 0 60px hsl(145 100% 50% / 0.5)"
+          },
+        },
+        "gold-pulse": {
+          "0%, 100%": { 
+            boxShadow: "0 0 30px hsl(51 100% 50% / 0.6), 0 0 60px hsl(51 100% 50% / 0.4)"
+          },
+          "50%": { 
+            boxShadow: "0 0 45px hsl(51 100% 50% / 0.9), 0 0 90px hsl(51 100% 50% / 0.6)"
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float": "float 6s ease-in-out infinite",
+        "twinkle": "twinkle 2s ease-in-out infinite",
+        "nebula-drift": "nebula-drift 20s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "gold-pulse": "gold-pulse 2s ease-in-out infinite",
       },
     },
   },

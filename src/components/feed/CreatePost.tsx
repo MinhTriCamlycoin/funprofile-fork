@@ -144,13 +144,13 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
   };
 
   return (
-    <Card className="p-3 sm:p-4 mb-4 sm:mb-6">
+    <div className="glass-card rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 border border-primary/30">
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
         <Textarea
           placeholder="What's on your mind?"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="min-h-[80px] sm:min-h-[100px] resize-none text-sm sm:text-base"
+          className="min-h-[80px] sm:min-h-[100px] resize-none text-sm sm:text-base bg-black/40 border-primary/20 text-white placeholder:text-white/50 focus:border-primary/50 backdrop-blur-sm"
           disabled={loading}
         />
         
@@ -159,7 +159,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
             <img 
               src={imagePreview} 
               alt="Preview" 
-              className="max-h-64 rounded-lg border"
+              className="max-h-64 rounded-lg border border-primary/30"
             />
             <Button
               type="button"
@@ -179,7 +179,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
             <video 
               src={videoPreview} 
               controls
-              className="max-h-64 rounded-lg border"
+              className="max-h-64 rounded-lg border border-primary/30"
             />
             <Button
               type="button"
@@ -210,7 +210,7 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
               size="sm"
               onClick={() => document.getElementById('image-upload')?.click()}
               disabled={loading}
-              className="text-xs sm:text-sm px-2 sm:px-3"
+              className="text-xs sm:text-sm px-2 sm:px-3 text-white hover:text-primary hover:bg-primary/10"
             >
               <ImagePlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Photo</span>
@@ -230,18 +230,24 @@ export const CreatePost = ({ onPostCreated }: CreatePostProps) => {
               size="sm"
               onClick={() => document.getElementById('video-upload')?.click()}
               disabled={loading}
-              className="text-xs sm:text-sm px-2 sm:px-3"
+              className="text-xs sm:text-sm px-2 sm:px-3 text-white hover:text-primary hover:bg-primary/10"
             >
               <Video className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Video</span>
             </Button>
           </div>
-          <Button type="submit" disabled={loading || (!content.trim() && !image && !video)} size="sm" className="text-xs sm:text-sm">
+          <Button 
+            type="submit" 
+            disabled={loading || (!content.trim() && !image && !video)} 
+            size="sm" 
+            className="text-xs sm:text-sm"
+            variant="premium"
+          >
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {loading ? 'Posting...' : 'Post'}
           </Button>
         </div>
       </form>
-    </Card>
+    </div>
   );
 };

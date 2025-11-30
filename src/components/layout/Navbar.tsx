@@ -1,13 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { Home, Users, User, Wallet, LogOut, LogIn, Moon, Sun } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Home, Users, Search, Bell, Wallet, User, LogOut, LogIn, Moon, Sun } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { NotificationDropdown } from './NotificationDropdown';
 import { SearchDialog } from './SearchDialog';
 
 export const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [darkMode, setDarkMode] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -15,7 +16,6 @@ export const Navbar = () => {
     const isDark = document.documentElement.classList.contains('dark');
     setDarkMode(isDark);
 
-    // Check authentication status
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsLoggedIn(!!session);
     });
@@ -41,63 +41,103 @@ export const Navbar = () => {
     navigate('/auth');
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 sm:h-20 items-center justify-between px-3 sm:px-6">
-        <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-1">
-          <img src="/fun-profile-logo.jpg" alt="FUN Profile" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0 ring-2 ring-primary/20 cursor-pointer" onClick={() => navigate('/')} />
-          <div className="hidden md:flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="text-primary-dark font-semibold hover:text-white hover:bg-primary [&:hover_svg]:text-white">
-              <Home className="w-4 h-4 mr-2 text-gold animate-pulse drop-shadow-[0_0_8px_hsl(var(--gold-glow))]" />
-              Feed
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/friends')} className="text-primary-dark font-semibold hover:text-white hover:bg-primary [&:hover_svg]:text-white">
-              <Users className="w-4 h-4 mr-2 text-gold animate-pulse drop-shadow-[0_0_8px_hsl(var(--gold-glow))]" />
-              Friends
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="text-primary-dark font-semibold hover:text-white hover:bg-primary [&:hover_svg]:text-white">
-              <User className="w-4 h-4 mr-2 text-gold animate-pulse drop-shadow-[0_0_8px_hsl(var(--gold-glow))]" />
-              Profile
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/wallet')} className="text-primary-dark font-semibold hover:text-white hover:bg-primary [&:hover_svg]:text-white">
-              <Wallet className="w-4 h-4 mr-2 text-gold animate-pulse drop-shadow-[0_0_8px_hsl(var(--gold-glow))]" />
-              Wallet
-            </Button>
+    <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4">
+      <nav className="max-w-7xl w-full bg-white rounded-full shadow-lg px-6 py-3 flex items-center justify-between">
+        {/* Left: Navigation Links */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/')}
+            className={`rounded-full font-medium transition-all ${
+              isActive('/') 
+                ? 'bg-primary/10 text-gray-900' 
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            <Home className="w-4 h-4 mr-2" />
+            <span className="hidden md:inline">Home</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/friends')}
+            className={`rounded-full font-medium transition-all ${
+              isActive('/friends') 
+                ? 'bg-primary/10 text-gray-900' 
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            <span className="hidden md:inline">Friends</span>
+          </Button>
+          <SearchDialog />
+        </div>
+
+        {/* Center: Logo */}
+        <div className="absolute left-1/2 -translate-x-1/2 -top-2">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse-glow" />
+            <img
+              src="/fun-profile-logo.jpg"
+              alt="FUN"
+              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl cursor-pointer hover:scale-110 transition-transform"
+              onClick={() => navigate('/')}
+            />
           </div>
         </div>
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          <div className="md:hidden flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/')}>
-              <Home className="w-4 h-4 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/friends')}>
-              <Users className="w-4 h-4 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/profile')}>
-              <User className="w-4 h-4 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/wallet')}>
-              <Wallet className="w-4 h-4 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />
-            </Button>
-          </div>
-          <SearchDialog />
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
           <NotificationDropdown />
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 hover:bg-primary [&:hover_svg]:text-white" onClick={toggleDarkMode}>
-            {darkMode ? <Sun className="w-4 h-4 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" /> : <Moon className="w-4 h-4 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/wallet')}
+            className="rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            <Wallet className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/profile')}
+            className="rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            <User className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleDarkMode}
+            className="rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </Button>
           {isLoggedIn ? (
-            <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-4 h-8 sm:h-10 text-primary-dark font-semibold hover:text-white hover:bg-primary [&:hover_svg]:text-white" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 sm:mr-2 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />
-              <span className="hidden sm:inline">Logout</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              <LogOut className="w-5 h-5" />
             </Button>
           ) : (
-            <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-4 h-8 sm:h-10 text-primary-dark font-semibold hover:text-white hover:bg-primary [&:hover_svg]:text-white" onClick={handleLogin}>
-              <LogIn className="w-4 h-4 sm:mr-2 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />
-              <span className="hidden sm:inline">Login</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogin}
+              className="rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              <LogIn className="w-5 h-5" />
             </Button>
           )}
         </div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };

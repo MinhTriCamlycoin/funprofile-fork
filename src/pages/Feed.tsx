@@ -59,13 +59,50 @@ const Feed = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Space Background */}
+      <div className="fixed inset-0 bg-gradient-to-b from-black via-emerald-950/20 to-black -z-10">
+        {/* Nebulae */}
+        <div className="absolute top-20 left-10 w-96 h-96 bg-primary/20 rounded-full blur-[120px] animate-nebula-drift" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/15 rounded-full blur-[120px] animate-nebula-drift" style={{ animationDelay: '5s' }} />
+        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-gold/10 rounded-full blur-[100px] animate-nebula-drift" style={{ animationDelay: '10s' }} />
+        
+        {/* Stars */}
+        {[...Array(50)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${2 + Math.random() * 2}s`,
+            }}
+          />
+        ))}
+        
+        {/* Floating Particles */}
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={`particle-${i}`}
+            className="absolute w-2 h-2 bg-primary/30 rounded-full animate-float"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 6}s`,
+              animationDuration: `${6 + Math.random() * 4}s`,
+            }}
+          />
+        ))}
+      </div>
+
       <Navbar />
-      <div className="container max-w-7xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
+      
+      <div className="container max-w-7xl mx-auto pt-24 pb-8 px-4 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr,380px] gap-6">
           {/* Left Sidebar - Hidden on mobile */}
           <aside className="hidden lg:block">
-            <div className="sticky top-4">
+            <div className="sticky top-24">
               <LeftSidebar />
             </div>
           </aside>
@@ -75,8 +112,8 @@ const Feed = () => {
             {currentUserId && <CreatePost onPostCreated={fetchPosts} />}
             
             {!currentUserId && (
-              <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="mb-6 p-4 glass-card rounded-2xl text-center border border-primary/30">
+                <p className="text-sm text-white/80">
                   Đăng nhập để tạo bài viết và tương tác
                 </p>
               </div>
@@ -85,12 +122,12 @@ const Feed = () => {
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-48 w-full" />
+                  <Skeleton key={i} className="h-48 w-full bg-white/5" />
                 ))}
               </div>
             ) : posts.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!</p>
+              <div className="text-center py-12 glass-card rounded-2xl border border-primary/30">
+                <p className="text-white/70">Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!</p>
               </div>
             ) : (
               posts.map((post) => (
@@ -106,7 +143,7 @@ const Feed = () => {
 
           {/* Honor Board Sidebar - Hidden on mobile */}
           <aside className="hidden lg:block">
-            <div className="sticky top-4">
+            <div className="sticky top-24">
               <HonorBoard />
             </div>
           </aside>
