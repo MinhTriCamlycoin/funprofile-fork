@@ -254,6 +254,30 @@ export type Database = {
           },
         ]
       }
+      reward_claims: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       search_logs: {
         Row: {
           created_at: string
