@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { FacebookNavbar } from '@/components/layout/FacebookNavbar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditProfile } from '@/components/profile/EditProfile';
-import { PostCard } from '@/components/feed/PostCard';
+import { FacebookPostCard } from '@/components/feed/FacebookPostCard';
 import { FriendRequestButton } from '@/components/friends/FriendRequestButton';
 import { FriendsList } from '@/components/friends/FriendsList';
 import { ProfileHonorBoard } from '@/components/profile/ProfileHonorBoard';
+import { Button } from '@/components/ui/button';
+import { Camera, Plus, PenSquare, MoreHorizontal, MapPin, Briefcase, GraduationCap, Heart, Clock } from 'lucide-react';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [friendsCount, setFriendsCount] = useState(0);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -76,8 +78,8 @@ const Profile = () => {
         .from('posts')
         .select(`
           *,
-          profiles (username, avatar_url),
-          reactions (id, user_id),
+          profiles (username, avatar_url, full_name),
+          reactions (id, user_id, type),
           comments (id)
         `)
         .eq('user_id', profileId)
@@ -91,8 +93,8 @@ const Profile = () => {
           *,
           posts:original_post_id (
             *,
-            profiles (username, avatar_url),
-            reactions (id, user_id),
+            profiles (username, avatar_url, full_name),
+            reactions (id, user_id, type),
             comments (id)
           )
         `)
@@ -100,6 +102,15 @@ const Profile = () => {
         .order('created_at', { ascending: false });
 
       setSharedPosts(sharedPostsData || []);
+
+      // Fetch friends count
+      const { count } = await supabase
+        .from('friendships')
+        .select('*', { count: 'exact', head: true })
+        .or(`user_id.eq.${profileId},friend_id.eq.${profileId}`)
+        .eq('status', 'accepted');
+
+      setFriendsCount(count || 0);
     } catch (error) {
       // Error fetching profile - silent fail
     } finally {
@@ -116,12 +127,10 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-[#f0f2f5]">
         <FacebookNavbar />
-        <main className="pt-14 pb-8">
-          <div className="container max-w-7xl mx-auto px-4">
-            <Skeleton className="h-64 w-full rounded-xl" />
-          </div>
+        <main className="pt-14">
+          <Skeleton className="h-[350px] w-full" />
         </main>
       </div>
     );
@@ -129,10 +138,10 @@ const Profile = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-[#f0f2f5]">
         <FacebookNavbar />
-        <main className="pt-14 pb-8">
-          <div className="container max-w-7xl mx-auto px-4 text-center py-12">
+        <main className="pt-14">
+          <div className="max-w-5xl mx-auto px-4 text-center py-12">
             <p className="text-muted-foreground">Không tìm thấy trang cá nhân</p>
           </div>
         </main>
@@ -141,110 +150,314 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#f0f2f5]">
       <FacebookNavbar />
-      <main className="pt-14 pb-8">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Main Content - Left Side */}
-            <div className="lg:col-span-8">
-              <div className="mb-6">
-                <Card className="overflow-hidden shadow-sm">
-                  {profile?.cover_url && (
-                    <div className="w-full h-32 sm:h-48 bg-gradient-to-r from-primary/20 to-primary/10">
-                      <img 
-                        src={profile.cover_url} 
-                        alt="Cover" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  {!profile?.cover_url && (
-                    <div className="w-full h-32 sm:h-48 bg-gradient-to-r from-primary/20 to-primary/10" />
-                  )}
-                  <CardHeader className="text-center p-4 sm:p-6 relative">
-                    <Avatar className="w-20 h-20 sm:w-24 sm:h-24 mx-auto -mt-12 sm:-mt-16 mb-3 sm:mb-4 border-4 border-background">
-                      {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                      <AvatarFallback className="text-2xl sm:text-3xl">
-                        {profile?.username?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <CardTitle className="text-xl sm:text-2xl">{profile?.username}</CardTitle>
-                    <p className="text-sm sm:text-base text-muted-foreground">{profile?.full_name || 'Chưa đặt tên'}</p>
-                    {!isOwnProfile && currentUserId && (
-                      <div className="mt-4">
-                        <FriendRequestButton userId={profile.id} currentUserId={currentUserId} />
-                      </div>
-                    )}
-                  </CardHeader>
-                  <CardContent className="px-4 sm:px-6">
-                    <p className="text-center text-sm sm:text-base break-words">{profile?.bio || 'Chưa có tiểu sử'}</p>
-                  </CardContent>
-                </Card>
+      <main className="pt-14">
+        {/* Cover Photo Section */}
+        <div className="bg-gradient-to-b from-gray-800 to-gray-600 relative">
+          <div className="max-w-5xl mx-auto">
+            <div className="h-[200px] sm:h-[300px] md:h-[350px] relative rounded-b-lg overflow-hidden">
+              {profile?.cover_url ? (
+                <img 
+                  src={profile.cover_url} 
+                  alt="Cover" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-primary/40 to-gold/40" />
+              )}
+              {isOwnProfile && (
+                <Button 
+                  size="sm" 
+                  className="absolute bottom-4 right-4 bg-white text-black hover:bg-gray-100"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Chỉnh sửa ảnh bìa
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Info Section */}
+        <div className="bg-white border-b shadow-sm">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-center md:items-end gap-4 pb-4 -mt-8 md:-mt-16 relative">
+              {/* Avatar */}
+              <div className="relative">
+                <Avatar className="w-32 h-32 md:w-44 md:h-44 border-4 border-white shadow-lg">
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                  <AvatarFallback className="text-4xl md:text-5xl bg-primary text-white">
+                    {profile?.username?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                {isOwnProfile && (
+                  <button className="absolute bottom-2 right-2 w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
+                    <Camera className="w-5 h-5" />
+                  </button>
+                )}
               </div>
 
-              <Tabs defaultValue="posts" className="w-full">
-                <TabsList className={`grid w-full ${isOwnProfile ? 'grid-cols-3' : 'grid-cols-1'} h-auto`}>
-                  <TabsTrigger value="posts" className="text-xs sm:text-sm py-2">{isOwnProfile ? 'My Posts' : 'Posts'}</TabsTrigger>
-                  {isOwnProfile && <TabsTrigger value="friends" className="text-xs sm:text-sm py-2">Friends</TabsTrigger>}
-                  {isOwnProfile && <TabsTrigger value="edit" className="text-xs sm:text-sm py-2">Edit Profile</TabsTrigger>}
-                </TabsList>
-                <TabsContent value="posts" className="space-y-4 mt-6">
-                  {posts.length === 0 && sharedPosts.length === 0 ? (
-                    <Card>
-                      <CardContent className="py-8 text-center text-muted-foreground">
-                        No posts yet
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <>
-                      {sharedPosts.map((sharedPost) => (
-                        sharedPost.posts && (
-                          <div key={sharedPost.id} className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground px-2">
-                              <span className="font-semibold text-primary">Đã share</span>
-                            </div>
-                            <PostCard 
-                              post={sharedPost.posts} 
-                              currentUserId={currentUserId}
-                              onPostDeleted={handlePostDeleted}
-                            />
-                          </div>
-                        )
-                      ))}
-                      {posts.map((post) => (
-                        <PostCard 
-                          key={post.id} 
-                          post={post} 
-                          currentUserId={currentUserId}
-                          onPostDeleted={handlePostDeleted}
-                        />
-                      ))}
-                    </>
-                  )}
-                </TabsContent>
-                {isOwnProfile && (
+              {/* Name and Stats */}
+              <div className="flex-1 text-center md:text-left md:pb-4">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  {profile?.full_name || profile?.username}
+                </h1>
+                <p className="text-muted-foreground">{friendsCount} bạn bè</p>
+                {/* Friend Avatars */}
+                <div className="flex justify-center md:justify-start -space-x-2 mt-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="w-8 h-8 rounded-full bg-gray-300 border-2 border-white" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pb-4">
+                {isOwnProfile ? (
                   <>
-                    <TabsContent value="friends" className="mt-6">
-                      <FriendsList userId={currentUserId} />
-                    </TabsContent>
-                    <TabsContent value="edit" className="mt-6">
-                      <EditProfile />
-                    </TabsContent>
+                    <Button className="bg-primary hover:bg-primary/90">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Thêm vào tin
+                    </Button>
+                    <Button variant="secondary">
+                      <PenSquare className="w-4 h-4 mr-2" />
+                      Chỉnh sửa trang cá nhân
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <FriendRequestButton userId={profile.id} currentUserId={currentUserId} />
+                    <Button variant="secondary">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
                   </>
                 )}
-              </Tabs>
+              </div>
             </div>
 
-            {/* Honor Board - Right Side */}
-            <div className="lg:col-span-4 hidden lg:block">
-              <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent hover:scrollbar-thumb-primary/40">
-                <ProfileHonorBoard
-                  userId={profile.id}
-                  username={profile.username}
-                  avatarUrl={profile.avatar_url}
-                />
-              </div>
+            {/* Navigation Tabs */}
+            <div className="border-t">
+              <Tabs defaultValue="posts" className="w-full">
+                <TabsList className="h-auto bg-transparent p-0 border-0 justify-start gap-0">
+                  <TabsTrigger 
+                    value="posts" 
+                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                  >
+                    Bài viết
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="about" 
+                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                  >
+                    Giới thiệu
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="friends" 
+                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                  >
+                    Bạn bè
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="photos" 
+                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                  >
+                    Ảnh
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="videos" 
+                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                  >
+                    Video
+                  </TabsTrigger>
+                  {isOwnProfile && (
+                    <TabsTrigger 
+                      value="edit" 
+                      className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                    >
+                      Chỉnh sửa
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+
+                <div className="py-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                    {/* Left Sidebar - Intro */}
+                    <div className="lg:col-span-2 space-y-4">
+                      <TabsContent value="posts" className="mt-0 space-y-4">
+                        {/* Intro Card */}
+                        <div className="bg-white rounded-lg shadow p-4">
+                          <h3 className="font-bold text-lg mb-3">Giới thiệu</h3>
+                          <p className="text-center text-muted-foreground mb-4">
+                            {profile?.bio || 'Chưa có tiểu sử'}
+                          </p>
+                          {isOwnProfile && (
+                            <Button variant="secondary" className="w-full">
+                              Thêm tiểu sử
+                            </Button>
+                          )}
+                          <div className="mt-4 space-y-3">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Briefcase className="w-5 h-5" />
+                              <span>Làm việc tại <strong className="text-foreground">FUN Profile</strong></span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <MapPin className="w-5 h-5" />
+                              <span>Sống tại <strong className="text-foreground">Việt Nam</strong></span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Clock className="w-5 h-5" />
+                              <span>Tham gia từ {new Date(profile?.created_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Photos Card */}
+                        <div className="bg-white rounded-lg shadow p-4">
+                          <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-lg">Ảnh</h3>
+                            <button className="text-primary hover:underline text-sm">Xem tất cả ảnh</button>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1 rounded-lg overflow-hidden">
+                            {posts.filter(p => p.image_url).slice(0, 9).map((post, i) => (
+                              <img 
+                                key={i}
+                                src={post.image_url}
+                                alt=""
+                                className="w-full aspect-square object-cover"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Friends Card */}
+                        <div className="bg-white rounded-lg shadow p-4">
+                          <div className="flex justify-between items-center mb-3">
+                            <div>
+                              <h3 className="font-bold text-lg">Bạn bè</h3>
+                              <p className="text-sm text-muted-foreground">{friendsCount} người bạn</p>
+                            </div>
+                            <button className="text-primary hover:underline text-sm">Xem tất cả bạn bè</button>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </div>
+
+                    {/* Right Content - Posts */}
+                    <div className="lg:col-span-3 space-y-4">
+                      <TabsContent value="posts" className="mt-0 space-y-4">
+                        {posts.length === 0 && sharedPosts.length === 0 ? (
+                          <div className="bg-white rounded-lg shadow p-8 text-center text-muted-foreground">
+                            Chưa có bài viết nào
+                          </div>
+                        ) : (
+                          <>
+                            {sharedPosts.map((sharedPost) => (
+                              sharedPost.posts && (
+                                <div key={sharedPost.id} className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground px-2">
+                                    <span className="font-semibold text-primary">Đã share</span>
+                                  </div>
+                                  <FacebookPostCard 
+                                    post={sharedPost.posts} 
+                                    currentUserId={currentUserId}
+                                    onPostDeleted={handlePostDeleted}
+                                  />
+                                </div>
+                              )
+                            ))}
+                            {posts.map((post) => (
+                              <FacebookPostCard 
+                                key={post.id} 
+                                post={post} 
+                                currentUserId={currentUserId}
+                                onPostDeleted={handlePostDeleted}
+                              />
+                            ))}
+                          </>
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="about" className="mt-0">
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="font-bold text-xl mb-4">Giới thiệu</h3>
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                              <Briefcase className="w-6 h-6 text-muted-foreground" />
+                              <span>Làm việc tại <strong>FUN Profile</strong></span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <GraduationCap className="w-6 h-6 text-muted-foreground" />
+                              <span>Học tại <strong>Đại học Vũ Trụ</strong></span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <MapPin className="w-6 h-6 text-muted-foreground" />
+                              <span>Sống tại <strong>Việt Nam</strong></span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Heart className="w-6 h-6 text-muted-foreground" />
+                              <span>Độc thân</span>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="friends" className="mt-0">
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="font-bold text-xl mb-4">Bạn bè</h3>
+                          <FriendsList userId={profile.id} />
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="photos" className="mt-0">
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="font-bold text-xl mb-4">Ảnh</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {posts.filter(p => p.image_url).map((post, i) => (
+                              <img 
+                                key={i}
+                                src={post.image_url}
+                                alt=""
+                                className="w-full aspect-square object-cover rounded-lg"
+                              />
+                            ))}
+                          </div>
+                          {posts.filter(p => p.image_url).length === 0 && (
+                            <p className="text-center text-muted-foreground py-8">Chưa có ảnh nào</p>
+                          )}
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="videos" className="mt-0">
+                        <div className="bg-white rounded-lg shadow p-6">
+                          <h3 className="font-bold text-xl mb-4">Video</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            {posts.filter(p => p.video_url).map((post, i) => (
+                              <video 
+                                key={i}
+                                src={post.video_url}
+                                className="w-full aspect-video object-cover rounded-lg"
+                                controls
+                              />
+                            ))}
+                          </div>
+                          {posts.filter(p => p.video_url).length === 0 && (
+                            <p className="text-center text-muted-foreground py-8">Chưa có video nào</p>
+                          )}
+                        </div>
+                      </TabsContent>
+
+                      {isOwnProfile && (
+                        <TabsContent value="edit" className="mt-0">
+                          <div className="bg-white rounded-lg shadow p-6">
+                            <EditProfile />
+                          </div>
+                        </TabsContent>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Tabs>
             </div>
           </div>
         </div>
