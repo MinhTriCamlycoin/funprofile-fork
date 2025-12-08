@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { bsc } from 'wagmi/chains';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowDown, ArrowUp, RefreshCw, ShoppingCart, Copy, Check, Gift, ArrowUpRight, ArrowDownLeft, Repeat, Loader2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, RefreshCw, ShoppingCart, Copy, Check, Gift, ArrowUpRight, ArrowDownLeft, Repeat, Wallet, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReceiveTab } from './ReceiveTab';
 import { SendTab } from './SendTab';
@@ -36,9 +37,15 @@ interface Transaction {
   created_at: string;
 }
 
+const WALLET_CONNECTED_KEY = 'fun_profile_wallet_connected';
+
 const WalletCenterContainer = () => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { data: balanceData } = useBalance({ address });
+  const { connect, connectors, isPending: isConnecting } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
+  
   const [profile, setProfile] = useState<Profile | null>(null);
   const [copied, setCopied] = useState(false);
   const [claimableReward, setClaimableReward] = useState(0);
@@ -51,6 +58,25 @@ const WalletCenterContainer = () => {
     { symbol: 'BTCB', name: 'Bitcoin BEP20', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', price: 42000.00, balance: 0, usdValue: 0, change24h: 1.8 },
     { symbol: 'CAMLY', name: 'Camly Coin', icon: camlyCoinLogo, price: 0.066, balance: 0, usdValue: 0, change24h: 5.2 },
   ]);
+
+  // Save wallet connection state to localStorage
+  useEffect(() => {
+    if (isConnected) {
+      localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
+    }
+  }, [isConnected]);
+
+  // Check and switch to BNB Chain if wrong network
+  useEffect(() => {
+    if (isConnected && chainId && chainId !== bsc.id) {
+      toast.error('Vui lòng chuyển sang BNB Smart Chain', {
+        action: {
+          label: 'Switch Network',
+          onClick: () => handleSwitchNetwork(),
+        },
+      });
+    }
+  }, [isConnected, chainId]);
 
   useEffect(() => {
     fetchProfile();
@@ -70,6 +96,15 @@ const WalletCenterContainer = () => {
     }
   }, [balanceData]);
 
+  // Refetch data when wallet connects
+  useEffect(() => {
+    if (isConnected) {
+      fetchProfile();
+      fetchClaimableReward();
+      fetchTransactions();
+    }
+  }, [isConnected, address]);
+
   const fetchProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
@@ -86,7 +121,6 @@ const WalletCenterContainer = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
 
-    // Calculate total reward
     const userId = session.user.id;
     
     const [postsRes, commentsRes, reactionsRes, friendsRes, sharesRes] = await Promise.all([
@@ -105,7 +139,6 @@ const WalletCenterContainer = () => {
 
     const totalReward = (postCount * 10000) + (commentCount * 5000) + (reactionCount * 1000) + (friendCount * 50000) + (shareCount * 20000) + 50000;
 
-    // Get claimed amount
     const { data: claims } = await supabase
       .from('reward_claims')
       .select('amount')
@@ -138,6 +171,51 @@ const WalletCenterContainer = () => {
         created_at: tx.created_at,
       })));
     }
+  };
+
+  const handleConnect = async () => {
+    const metamaskConnector = connectors.find(c => c.name === 'MetaMask');
+    if (metamaskConnector) {
+      try {
+        connect(
+          { connector: metamaskConnector, chainId: bsc.id },
+          {
+            onSuccess: () => {
+              toast.success('Kết nối ví thành công!');
+              localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
+            },
+            onError: (error) => {
+              if (error.message.includes('User rejected')) {
+                toast.error('Bạn đã từ chối kết nối ví');
+              } else {
+                toast.error('Không thể kết nối ví. Vui lòng thử lại.');
+              }
+            },
+          }
+        );
+      } catch (error) {
+        toast.error('Không thể kết nối ví');
+      }
+    } else {
+      toast.error('Vui lòng cài đặt MetaMask để tiếp tục');
+      window.open('https://metamask.io/download/', '_blank');
+    }
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    localStorage.removeItem(WALLET_CONNECTED_KEY);
+    toast.success('Đã ngắt kết nối ví');
+  };
+
+  const handleSwitchNetwork = () => {
+    switchChain(
+      { chainId: bsc.id },
+      {
+        onSuccess: () => toast.success('Đã chuyển sang BNB Smart Chain'),
+        onError: () => toast.error('Không thể chuyển network. Vui lòng thử lại.'),
+      }
+    );
   };
 
   const copyAddress = () => {
@@ -179,6 +257,7 @@ const WalletCenterContainer = () => {
     return `${days} ngày trước`;
   };
 
+  // Not connected state - Show Connect Wallet button
   if (!isConnected) {
     return (
       <div className="space-y-6">
@@ -189,27 +268,58 @@ const WalletCenterContainer = () => {
               <h1 className="text-2xl font-bold text-yellow-400 drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
                 My Wallet
               </h1>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-yellow-400/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-yellow-400/30">
-                  <img src="https://cryptologos.cc/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />
-                  <span className="text-sm font-medium text-white">BNB Smart Chain</span>
-                </div>
+              <div className="flex items-center gap-2 bg-yellow-400/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-yellow-400/30">
+                <img src="https://cryptologos.cc/logos/bnb-bnb-logo.png" alt="BNB" className="w-5 h-5" />
+                <span className="text-sm font-medium text-white">BNB Smart Chain</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Connect Wallet Card */}
-        <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-primary to-gold rounded-full flex items-center justify-center mx-auto mb-4">
-            <img 
-              src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" 
-              alt="MetaMask" 
-              className="w-12 h-12"
-            />
+        <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-green-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/30">
+            <Wallet className="w-12 h-12 text-white" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Kết nối ví để tiếp tục</h2>
-          <p className="text-muted-foreground mb-4">Vui lòng kết nối MetaMask để xem tài sản và thực hiện giao dịch</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Kết nối ví để tiếp tục</h2>
+          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+            Vui lòng kết nối MetaMask để xem tài sản và thực hiện giao dịch trên BNB Smart Chain
+          </p>
+          
+          <Button
+            onClick={handleConnect}
+            disabled={isConnecting}
+            className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-yellow-300 font-bold text-lg px-10 py-6 rounded-xl shadow-lg hover:shadow-green-500/40 transition-all duration-300 hover:scale-105"
+            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}
+          >
+            {isConnecting ? (
+              <>
+                <RefreshCw className="w-6 h-6 mr-2 animate-spin" />
+                Đang kết nối...
+              </>
+            ) : (
+              <>
+                <img 
+                  src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" 
+                  alt="MetaMask" 
+                  className="w-6 h-6 mr-2"
+                />
+                Connect Wallet
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-muted-foreground mt-6">
+            Chưa có MetaMask?{' '}
+            <a 
+              href="https://metamask.io/download/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium"
+            >
+              Tải xuống tại đây
+            </a>
+          </p>
         </div>
       </div>
     );
@@ -242,6 +352,16 @@ const WalletCenterContainer = () => {
                 {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
+            {/* Disconnect Button */}
+            <Button
+              onClick={handleDisconnect}
+              variant="ghost"
+              size="sm"
+              className="bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200"
+            >
+              <LogOut className="w-4 h-4 mr-1" />
+              Disconnect
+            </Button>
           </div>
         </div>
 
