@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Navbar } from '@/components/layout/Navbar';
+import { FacebookNavbar } from '@/components/layout/FacebookNavbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -216,9 +216,9 @@ const AdminMigration = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container max-w-4xl py-8 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f0f2f5]">
+        <FacebookNavbar />
+        <main className="container max-w-4xl pt-20 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </main>
       </div>
@@ -228,9 +228,9 @@ const AdminMigration = () => {
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main className="container max-w-4xl py-8 px-4">
+    <div className="min-h-screen bg-[#f0f2f5]">
+      <FacebookNavbar />
+      <main className="container max-w-4xl pt-20 px-4">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Migration to Cloudflare R2</h1>
           <p className="text-muted-foreground">
