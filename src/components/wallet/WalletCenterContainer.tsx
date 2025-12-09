@@ -189,7 +189,7 @@ const WalletCenterContainer = () => {
     }
   };
 
-  const handleConnect = useCallback(async () => {
+  const handleConnect = useCallback(() => {
     // Clear previous error
     setConnectionError(null);
     setManuallyDisconnected(false);
@@ -206,72 +206,51 @@ const WalletCenterContainer = () => {
     // Start connecting
     setIsConnectingWithTimeout(true);
     
-    // Set timeout for connection (longer for user to respond in MetaMask)
+    // Set timeout for connection (30 seconds to allow user time to respond in MetaMask)
     connectionTimeoutRef.current = setTimeout(() => {
-      // Only show timeout if still in connecting state and not connected
-      if (!isConnected) {
-        setIsConnectingWithTimeout(false);
-        setConnectionError('Kết nối quá thời gian. Vui lòng mở MetaMask và thử lại.');
-        toast.error('Kết nối quá thời gian. Vui lòng thử lại.');
-      }
+      setIsConnectingWithTimeout(false);
+      setConnectionError('Kết nối quá thời gian. Vui lòng thử lại.');
+      toast.error('Kết nối quá thời gian. Vui lòng thử lại.');
     }, CONNECTION_TIMEOUT);
 
-    try {
-      await connect(
-        { connector: metamaskConnector, chainId: bsc.id },
-        {
-          onSuccess: () => {
-            // Clear timeout
-            if (connectionTimeoutRef.current) {
-              clearTimeout(connectionTimeoutRef.current);
-              connectionTimeoutRef.current = null;
-            }
-            setIsConnectingWithTimeout(false);
-            setConnectionError(null);
-            toast.success('Kết nối ví thành công!');
-            localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
-          },
-          onError: (error: Error) => {
-            // Clear timeout
-            if (connectionTimeoutRef.current) {
-              clearTimeout(connectionTimeoutRef.current);
-              connectionTimeoutRef.current = null;
-            }
-            setIsConnectingWithTimeout(false);
-            
-            const errorMsg = error?.message || '';
-            if (errorMsg.includes('User rejected') || errorMsg.includes('rejected')) {
-              setConnectionError('Bạn đã từ chối kết nối ví');
-              toast.error('Bạn đã từ chối kết nối ví');
-            } else if (errorMsg.includes('already pending')) {
-              setConnectionError('Đang có yêu cầu kết nối. Vui lòng kiểm tra MetaMask.');
-              toast.error('Vui lòng mở MetaMask và xác nhận kết nối');
-            } else {
-              setConnectionError('Không thể kết nối ví. Vui lòng thử lại.');
-              toast.error('Không thể kết nối ví. Vui lòng thử lại.');
-            }
-          },
-        }
-      );
-    } catch (error: unknown) {
-      // Clear timeout
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
+    // Use wagmi connect without await - it uses callbacks
+    connect(
+      { connector: metamaskConnector, chainId: bsc.id },
+      {
+        onSuccess: () => {
+          // Clear timeout
+          if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+          }
+          setIsConnectingWithTimeout(false);
+          setConnectionError(null);
+          toast.success('Kết nối ví thành công!');
+          localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
+        },
+        onError: (error: Error) => {
+          // Clear timeout
+          if (connectionTimeoutRef.current) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+          }
+          setIsConnectingWithTimeout(false);
+          
+          const errorMsg = error?.message || '';
+          if (errorMsg.includes('User rejected') || errorMsg.includes('rejected')) {
+            setConnectionError('Bạn đã từ chối kết nối ví');
+            toast.error('Bạn đã từ chối kết nối ví');
+          } else if (errorMsg.includes('already pending')) {
+            setConnectionError('Đang có yêu cầu kết nối. Vui lòng mở MetaMask.');
+            toast.error('Vui lòng mở MetaMask và xác nhận kết nối');
+          } else {
+            setConnectionError('Không thể kết nối ví. Vui lòng thử lại.');
+            toast.error('Không thể kết nối ví');
+          }
+        },
       }
-      setIsConnectingWithTimeout(false);
-      
-      const err = error as Error;
-      const errorMsg = err?.message || '';
-      if (errorMsg.includes('User rejected') || errorMsg.includes('rejected')) {
-        setConnectionError('Bạn đã từ chối kết nối ví');
-        toast.error('Bạn đã từ chối kết nối ví');
-      } else {
-        setConnectionError('Không thể kết nối ví. Vui lòng thử lại.');
-        toast.error('Không thể kết nối ví. Vui lòng thử lại.');
-      }
-    }
-  }, [connectors, connect, isConnected]);
+    );
+  }, [connectors, connect]);
 
   const handleDisconnect = () => {
     // Set local state immediately for instant UI update
