@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useBalance, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { bsc } from 'wagmi/chains';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowDown, ArrowUp, RefreshCw, ShoppingCart, Copy, Check, Gift, ArrowUpRight, ArrowDownLeft, Repeat, Wallet, LogOut } from 'lucide-react';
+import { ArrowDown, ArrowUp, RefreshCw, ShoppingCart, Copy, Check, Gift, ArrowUpRight, ArrowDownLeft, Repeat, Wallet, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReceiveTab } from './ReceiveTab';
 import { SendTab } from './SendTab';
+import { useTokenBalances } from '@/hooks/useTokenBalances';
 import camlyCoinLogo from '@/assets/camly-coin-logo.png';
 import metamaskLogo from '@/assets/metamask-logo.png';
 
@@ -17,16 +18,6 @@ interface Profile {
   username: string;
   avatar_url: string | null;
   full_name: string | null;
-}
-
-interface TokenData {
-  symbol: string;
-  name: string;
-  icon: string;
-  price: number;
-  balance: number;
-  usdValue: number;
-  change24h: number;
 }
 
 interface Transaction {
@@ -42,10 +33,12 @@ const WALLET_CONNECTED_KEY = 'fun_profile_wallet_connected';
 
 const WalletCenterContainer = () => {
   const { address, isConnected, chainId } = useAccount();
-  const { data: balanceData } = useBalance({ address });
   const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
+  
+  // Use real token balances hook
+  const { tokens, totalUsdValue, isLoading: isTokensLoading, refetch: refetchTokens, prices } = useTokenBalances();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [copied, setCopied] = useState(false);
@@ -56,12 +49,6 @@ const WalletCenterContainer = () => {
   const [manuallyDisconnected, setManuallyDisconnected] = useState(() => {
     return localStorage.getItem(WALLET_CONNECTED_KEY) !== 'true';
   });
-  const [tokens, setTokens] = useState<TokenData[]>([
-    { symbol: 'BNB', name: 'BNB', icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png', price: 320.50, balance: 0, usdValue: 0, change24h: 2.5 },
-    { symbol: 'USDT', name: 'Tether USD', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png', price: 1.00, balance: 0, usdValue: 0, change24h: 0.01 },
-    { symbol: 'BTCB', name: 'Bitcoin BEP20', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', price: 42000.00, balance: 0, usdValue: 0, change24h: 1.8 },
-    { symbol: 'CAMLY', name: 'Camly Coin', icon: camlyCoinLogo, price: 0.066, balance: 0, usdValue: 0, change24h: 5.2 },
-  ]);
 
   // Save wallet connection state to localStorage and reset manuallyDisconnected when connected
   useEffect(() => {
@@ -92,17 +79,12 @@ const WalletCenterContainer = () => {
     fetchTransactions();
   }, []);
 
+  // Refetch tokens when connected
   useEffect(() => {
-    if (balanceData) {
-      setTokens(prev => prev.map(token => {
-        if (token.symbol === 'BNB') {
-          const balance = parseFloat(balanceData.formatted);
-          return { ...token, balance, usdValue: balance * token.price };
-        }
-        return token;
-      }));
+    if (isConnected) {
+      refetchTokens();
     }
-  }, [balanceData]);
+  }, [isConnected, refetchTokens]);
 
   // Refetch data when wallet connects
   useEffect(() => {
@@ -216,7 +198,6 @@ const WalletCenterContainer = () => {
     // Clear localStorage
     localStorage.removeItem(WALLET_CONNECTED_KEY);
     // Clear all wallet data
-    setTokens(prev => prev.map(token => ({ ...token, balance: 0, usdValue: 0 })));
     setTransactions([]);
     setClaimableReward(0);
     // Disconnect from wagmi
@@ -243,7 +224,6 @@ const WalletCenterContainer = () => {
     }
   };
 
-  const totalUsdValue = tokens.reduce((sum, token) => sum + token.usdValue, 0);
   const shortenedAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '0x0000...0000';
 
   const formatNumber = (num: number) => {
@@ -384,10 +364,30 @@ const WalletCenterContainer = () => {
 
         {/* Total Assets */}
         <div className="bg-gradient-to-br from-emerald-800 via-emerald-600 to-green-400 p-6">
-          <p className="text-white/80 text-sm mb-1">Total Assets on BNB Chain:</p>
-          <p className="text-4xl md:text-5xl font-bold text-white mb-6" style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.2)' }}>
-            ~${formatNumber(totalUsdValue)}.00 USD
-          </p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-white/80 text-sm">Total Assets on BNB Chain:</p>
+            {!isTokensLoading && prices.BNB && (
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                prices.BNB.usd_24h_change >= 0 
+                  ? 'bg-green-400/30 text-green-100' 
+                  : 'bg-red-400/30 text-red-100'
+              }`}>
+                {prices.BNB.usd_24h_change >= 0 ? (
+                  <TrendingUp className="w-3 h-3" />
+                ) : (
+                  <TrendingDown className="w-3 h-3" />
+                )}
+                <span>24h: {prices.BNB.usd_24h_change >= 0 ? '+' : ''}{prices.BNB.usd_24h_change.toFixed(2)}%</span>
+              </div>
+            )}
+          </div>
+          {isTokensLoading ? (
+            <div className="animate-pulse bg-white/20 rounded h-12 w-64 mb-6" />
+          ) : (
+            <p className="text-4xl md:text-5xl font-bold text-white mb-6" style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.2)' }}>
+              ~${formatNumber(totalUsdValue)}.00 USD
+            </p>
+          )}
           
           {/* Action Buttons */}
           <div className="flex justify-center gap-6">
@@ -466,20 +466,72 @@ const WalletCenterContainer = () => {
           </TabsList>
           
           <TabsContent value="tokens" className="m-0">
+            {/* Refresh button */}
+            <div className="flex justify-end p-2 border-b">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refetchTokens}
+                disabled={isTokensLoading}
+                className="text-xs text-muted-foreground hover:text-primary"
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${isTokensLoading ? 'animate-spin' : ''}`} />
+                {isTokensLoading ? 'Đang tải...' : 'Làm mới'}
+              </Button>
+            </div>
             <div className="divide-y">
               {tokens.map((token) => (
                 <div key={token.symbol} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <img src={token.icon} alt={token.symbol} className="w-10 h-10 rounded-full" />
+                    <img 
+                      src={token.symbol === 'CAMLY' ? camlyCoinLogo : token.icon} 
+                      alt={token.symbol} 
+                      className="w-10 h-10 rounded-full" 
+                    />
                     <div>
                       <p className="font-semibold">{token.symbol}</p>
                       <p className="text-xs text-muted-foreground">{token.name}</p>
                     </div>
                   </div>
                   
+                  {/* Price info */}
+                  <div className="text-center hidden sm:block">
+                    <p className="text-sm font-medium">
+                      ${token.price < 0.01 ? token.price.toFixed(6) : token.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <div className={`flex items-center justify-center text-xs ${token.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {token.change24h >= 0 ? (
+                        <TrendingUp className="w-3 h-3 mr-0.5" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3 mr-0.5" />
+                      )}
+                      <span>{token.change24h >= 0 ? '+' : ''}{token.change24h.toFixed(2)}%</span>
+                    </div>
+                  </div>
+                  
+                  {/* Balance & USD value */}
                   <div className="text-right">
-                    <p className="font-semibold">{token.balance.toFixed(token.symbol === 'BTCB' ? 4 : 2)} {token.symbol}</p>
-                    <p className="text-sm text-muted-foreground">(~${formatNumber(token.usdValue)} USD)</p>
+                    <p className="font-semibold">
+                      {token.isLoading ? (
+                        <span className="animate-pulse bg-gray-200 rounded w-16 h-4 inline-block" />
+                      ) : (
+                        <>
+                          {token.symbol === 'BTCB' 
+                            ? token.balance.toFixed(6) 
+                            : token.symbol === 'CAMLY'
+                              ? formatNumber(token.balance)
+                              : token.balance.toFixed(4)
+                          } {token.symbol}
+                        </>
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {token.isLoading ? (
+                        <span className="animate-pulse bg-gray-200 rounded w-12 h-3 inline-block" />
+                      ) : (
+                        `~$${formatNumber(token.usdValue)} USD`
+                      )}
+                    </p>
                   </div>
                 </div>
               ))}
