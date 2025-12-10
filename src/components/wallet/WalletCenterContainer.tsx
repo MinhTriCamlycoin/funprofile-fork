@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowDown, ArrowUp, RefreshCw, ShoppingCart, Copy, Check, Gift, ArrowUpRight, ArrowDownLeft, Repeat, Wallet, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, RefreshCw, ShoppingCart, Copy, Check, Gift, ArrowUpRight, ArrowDownLeft, Repeat, Wallet, LogOut, TrendingUp, TrendingDown, UserRoundCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReceiveTab } from './ReceiveTab';
 import { SendTab } from './SendTab';
@@ -30,7 +30,7 @@ interface Transaction {
 }
 
 const WALLET_CONNECTED_KEY = 'fun_profile_wallet_connected';
-const CONNECTION_TIMEOUT = 10000; // 10 seconds timeout
+const CONNECTION_TIMEOUT = 30000; // 30 seconds timeout for user to respond in MetaMask
 
 const WalletCenterContainer = () => {
   const { address, isConnected, isConnecting: accountConnecting, chainId } = useAccount();
@@ -189,7 +189,7 @@ const WalletCenterContainer = () => {
     }
   };
 
-  const handleConnect = useCallback(() => {
+  const handleConnect = useCallback(async () => {
     // Clear previous error
     setConnectionError(null);
     setManuallyDisconnected(false);
@@ -203,22 +203,28 @@ const WalletCenterContainer = () => {
       return;
     }
 
+    // Check if MetaMask is installed
+    if (typeof window !== 'undefined' && !window.ethereum) {
+      toast.error('Vui lòng cài đặt MetaMask để tiếp tục');
+      window.open('https://metamask.io/download/', '_blank');
+      return;
+    }
+
     // Start connecting
     setIsConnectingWithTimeout(true);
     
-    // Set timeout for connection (30 seconds to allow user time to respond in MetaMask)
+    // Set timeout for connection
     connectionTimeoutRef.current = setTimeout(() => {
       setIsConnectingWithTimeout(false);
       setConnectionError('Kết nối quá thời gian. Vui lòng thử lại.');
       toast.error('Kết nối quá thời gian. Vui lòng thử lại.');
     }, CONNECTION_TIMEOUT);
 
-    // Use wagmi connect without await - it uses callbacks
+    // Use wagmi connect with callbacks
     connect(
       { connector: metamaskConnector, chainId: bsc.id },
       {
         onSuccess: () => {
-          // Clear timeout
           if (connectionTimeoutRef.current) {
             clearTimeout(connectionTimeoutRef.current);
             connectionTimeoutRef.current = null;
@@ -229,7 +235,6 @@ const WalletCenterContainer = () => {
           localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
         },
         onError: (error: Error) => {
-          // Clear timeout
           if (connectionTimeoutRef.current) {
             clearTimeout(connectionTimeoutRef.current);
             connectionTimeoutRef.current = null;
@@ -251,6 +256,31 @@ const WalletCenterContainer = () => {
       }
     );
   }, [connectors, connect]);
+
+  // Switch account - requests MetaMask to show account picker
+  const handleSwitchAccount = useCallback(async () => {
+    try {
+      if (typeof window !== 'undefined' && window.ethereum) {
+        // Request MetaMask to open account picker
+        await window.ethereum.request({
+          method: 'wallet_requestPermissions',
+          params: [{ eth_accounts: {} }],
+        });
+        toast.success('Đã chuyển tài khoản thành công!');
+        // Refetch data after account switch
+        refetchTokens();
+        fetchTransactions();
+      } else {
+        toast.error('MetaMask không khả dụng');
+      }
+    } catch (error: any) {
+      if (error?.code === 4001) {
+        toast.error('Bạn đã hủy chuyển tài khoản');
+      } else {
+        toast.error('Không thể chuyển tài khoản');
+      }
+    }
+  }, [refetchTokens]);
 
   const handleDisconnect = () => {
     // Set local state immediately for instant UI update
@@ -465,6 +495,16 @@ const WalletCenterContainer = () => {
                 {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
+            {/* Switch Account Button */}
+            <Button
+              onClick={handleSwitchAccount}
+              variant="ghost"
+              size="sm"
+              className="bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white transition-all duration-200"
+            >
+              <UserRoundCog className="w-4 h-4 mr-1" />
+              Switch
+            </Button>
             {/* Disconnect Button */}
             <Button
               onClick={handleDisconnect}
