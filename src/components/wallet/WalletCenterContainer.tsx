@@ -49,13 +49,24 @@ const WalletCenterContainer = () => {
   const [showSend, setShowSend] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  
+  // Track if we should show disconnected UI (user explicitly disconnected)
+  const [showDisconnectedUI, setShowDisconnectedUI] = useState(() => {
+    return localStorage.getItem(WALLET_DISCONNECTED_KEY) === 'true';
+  });
 
-  // Clear disconnected flag when wallet connects successfully
+  // CRITICAL: On mount, if user explicitly disconnected before, disconnect wagmi too
+  // This prevents wagmi's auto-reconnect from ignoring user's disconnect action
   useEffect(() => {
-    if (isConnected) {
-      localStorage.removeItem(WALLET_DISCONNECTED_KEY);
+    const wasDisconnected = localStorage.getItem(WALLET_DISCONNECTED_KEY) === 'true';
+    if (wasDisconnected && isConnected) {
+      // User had disconnected but wagmi auto-reconnected - disconnect again
+      disconnect();
     }
-  }, [isConnected]);
+  }, []); // Run only on mount
+
+  // When user explicitly connects (not auto-reconnect), clear the flag
+  // This is handled in handleConnect, not here
 
   // Check and switch to BNB Chain if wrong network
   useEffect(() => {
@@ -171,6 +182,7 @@ const WalletCenterContainer = () => {
     // Clear previous state
     setConnectionError(null);
     setIsConnecting(true);
+    setShowDisconnectedUI(false); // Clear disconnected UI flag
     localStorage.removeItem(WALLET_DISCONNECTED_KEY);
 
     // Check if MetaMask is installed
@@ -260,6 +272,7 @@ const WalletCenterContainer = () => {
   const handleDisconnect = () => {
     // Set flag to prevent auto-reconnect on page reload
     localStorage.setItem(WALLET_DISCONNECTED_KEY, 'true');
+    setShowDisconnectedUI(true); // Immediately show disconnected UI
     // Clear all wallet data
     setTransactions([]);
     setClaimableReward(0);
@@ -347,8 +360,9 @@ const WalletCenterContainer = () => {
   };
 
   // Not connected state - Show Connect Wallet button
-  // Only check isConnected from wagmi - single source of truth
-  if (!isConnected) {
+  // Check both: wagmi isConnected AND our showDisconnectedUI flag
+  // showDisconnectedUI handles the case where wagmi hasn't updated yet or auto-reconnected
+  if (!isConnected || showDisconnectedUI) {
     return (
       <div className="space-y-6">
         {/* Header */}
