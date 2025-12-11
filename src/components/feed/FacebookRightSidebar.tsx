@@ -196,6 +196,7 @@ export const FacebookRightSidebar = () => {
             src="/fun-profile-logo-thumb.jpg"
             alt="Ad"
             className="w-32 h-32 rounded-lg object-cover"
+            fetchPriority="high"
           />
           <div>
             <p className="font-semibold text-sm">FUN Profile - Mạng xã hội Web3</p>
