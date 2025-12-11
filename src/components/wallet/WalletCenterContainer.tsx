@@ -29,12 +29,12 @@ interface Transaction {
   created_at: string;
 }
 
-// Key to track if user explicitly disconnected
+// Key to track if user explicitly disconnected - stored in localStorage for persistence
 const WALLET_DISCONNECTED_KEY = 'fun_profile_wallet_disconnected';
 
 const WalletCenterContainer = () => {
   const { address, isConnected, chainId } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
   
@@ -49,23 +49,13 @@ const WalletCenterContainer = () => {
   const [showSend, setShowSend] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  
-  // Track if user explicitly disconnected - this prevents auto-reconnect
-  const [userDisconnected, setUserDisconnected] = useState(() => {
-    return localStorage.getItem(WALLET_DISCONNECTED_KEY) === 'true';
-  });
 
-  // When wallet connects successfully, clear the disconnected flag
+  // Clear disconnected flag when wallet connects successfully
   useEffect(() => {
-    if (isConnected && userDisconnected) {
-      // Small delay to ensure wagmi has fully connected
-      const timer = setTimeout(() => {
-        setUserDisconnected(false);
-        localStorage.removeItem(WALLET_DISCONNECTED_KEY);
-      }, 300);
-      return () => clearTimeout(timer);
+    if (isConnected) {
+      localStorage.removeItem(WALLET_DISCONNECTED_KEY);
     }
-  }, [isConnected, userDisconnected]);
+  }, [isConnected]);
 
   // Check and switch to BNB Chain if wrong network
   useEffect(() => {
@@ -180,7 +170,6 @@ const WalletCenterContainer = () => {
   const handleConnect = useCallback(async () => {
     // Clear previous state
     setConnectionError(null);
-    setUserDisconnected(false);
     setIsConnecting(true);
     localStorage.removeItem(WALLET_DISCONNECTED_KEY);
 
@@ -269,13 +258,12 @@ const WalletCenterContainer = () => {
   }, [refetchTokens]);
 
   const handleDisconnect = () => {
-    // Set disconnected flag immediately for instant UI update
-    setUserDisconnected(true);
+    // Set flag to prevent auto-reconnect on page reload
     localStorage.setItem(WALLET_DISCONNECTED_KEY, 'true');
     // Clear all wallet data
     setTransactions([]);
     setClaimableReward(0);
-    // Disconnect from wagmi
+    // Disconnect from wagmi - this will set isConnected to false
     disconnect();
     toast.success('Đã ngắt kết nối ví');
   };
@@ -359,8 +347,8 @@ const WalletCenterContainer = () => {
   };
 
   // Not connected state - Show Connect Wallet button
-  // Show Connect Wallet UI when not connected OR user explicitly disconnected
-  if (!isConnected || userDisconnected) {
+  // Only check isConnected from wagmi - single source of truth
+  if (!isConnected) {
     return (
       <div className="space-y-6">
         {/* Header */}
