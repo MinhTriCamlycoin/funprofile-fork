@@ -99,7 +99,7 @@ export const FacebookNavbar = () => {
         {/* Left Section - Logo & Search */}
         <div className="flex items-center gap-2 w-[280px]">
           <img
-            src="/fun-profile-logo.jpg"
+            src="/fun-profile-logo-small.webp"
             alt="FUN Profile"
             className="w-10 h-10 rounded-full cursor-pointer"
             onClick={() => navigate('/')}
