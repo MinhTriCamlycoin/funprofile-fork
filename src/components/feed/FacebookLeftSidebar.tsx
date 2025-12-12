@@ -143,7 +143,7 @@ export const FacebookLeftSidebar = () => {
       <div className="border-t border-border my-3" />
 
       {/* Shortcuts */}
-      <h3 className="px-2 text-muted-foreground font-semibold text-sm mb-2">Lối tắt của bạn</h3>
+      <h3 className="px-2 text-muted-foreground font-semibold text-sm mb-2">FUN ECOSYSTEM</h3>
       {shortcuts.map((shortcut) => (
         <button
           key={shortcut.name}
