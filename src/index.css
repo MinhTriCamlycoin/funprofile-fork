@@ -16,10 +16,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 9% 8%;
 
-    /* FUN Profile Green - Primary */
-    --primary: 142 76% 36%;
+    /* FUN Profile Green - Primary (WCAG AA compliant - 4.5:1 contrast with white) */
+    --primary: 142 76% 29%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 142 76% 30%;
+    --primary-hover: 142 76% 24%;
     
     /* Golden Yellow - Accent */
     --gold: 48 96% 53%;
@@ -30,7 +30,7 @@
     --secondary-foreground: 220 9% 8%;
 
     --muted: 220 4% 90%;
-    --muted-foreground: 220 9% 46%;
+    --muted-foreground: 220 9% 35%;
 
     --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
