@@ -62,7 +62,24 @@ export const FacebookLeftSidebar = () => {
   ];
 
   const shortcuts = [
-    { name: 'FUN Profile Community', avatar: '/fun-profile-logo-small.webp' },
+    { 
+      name: 'About FUN Profile', 
+      avatar: '/fun-profile-logo-small.webp',
+      path: '/about',
+      isExternal: false
+    },
+    { 
+      name: 'FUN Play', 
+      avatar: '/fun-play-logo.png',
+      path: 'https://play.fun.rich',
+      isExternal: true
+    },
+    { 
+      name: 'FUN Planet', 
+      avatar: '/fun-planet-logo.png',
+      path: 'https://planet.fun.rich',
+      isExternal: true
+    },
   ];
 
   return (
@@ -130,14 +147,21 @@ export const FacebookLeftSidebar = () => {
       {shortcuts.map((shortcut) => (
         <button
           key={shortcut.name}
-          className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors"
+          onClick={() => {
+            if (shortcut.isExternal) {
+              window.open(shortcut.path, '_blank', 'noopener,noreferrer');
+            } else {
+              navigate(shortcut.path);
+            }
+          }}
+          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-secondary hover:shadow-[0_0_15px_rgba(250,204,21,0.4)] transition-all duration-300 group"
         >
           <img
             src={shortcut.avatar}
             alt={shortcut.name}
-            className="w-9 h-9 rounded-lg object-cover"
+            className="w-9 h-9 rounded-lg object-cover group-hover:shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-shadow duration-300"
           />
-          <span className="font-medium text-sm">{shortcut.name}</span>
+          <span className="font-medium text-sm group-hover:text-primary transition-colors duration-300">{shortcut.name}</span>
         </button>
       ))}
 
