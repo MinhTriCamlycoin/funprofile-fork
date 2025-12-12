@@ -175,7 +175,7 @@ export const HonorBoard = () => {
           <div className="inline-block">
             <div className="relative">
               <img 
-                src="/fun-profile-logo.jpg" 
+                src="/fun-profile-logo-small.webp" 
                 alt="Fun Profile Web3"
                 className="w-12 h-12 mx-auto rounded-full border border-yellow-400 shadow-lg"
               />

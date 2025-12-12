@@ -62,7 +62,7 @@ export const FacebookLeftSidebar = () => {
   ];
 
   const shortcuts = [
-    { name: 'FUN Profile Community', avatar: '/fun-profile-logo.jpg' },
+    { name: 'FUN Profile Community', avatar: '/fun-profile-logo-small.webp' },
   ];
 
   return (
