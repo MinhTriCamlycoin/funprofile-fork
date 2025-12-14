@@ -160,26 +160,22 @@ export const HonorBoard = () => {
   );
 
   return (
-    <div className="sticky top-20 rounded-2xl overflow-hidden border-2 border-gold bg-white shadow-gold-glow animate-gold-pulse">
-      {/* Sparkle effects */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <div className="absolute top-2 left-2 w-1 h-1 bg-gold rounded-full animate-pulse"></div>
-        <div className="absolute top-4 right-4 w-1 h-1 bg-gold rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-        <div className="absolute bottom-6 left-6 w-1 h-1 bg-gold rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-4 right-8 w-1 h-1 bg-gold rounded-full animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-      </div>
-
+    <div 
+      className="sticky top-20 rounded-2xl overflow-hidden border-2 border-gold bg-white shadow-gold-glow"
+      style={{ contain: 'layout style paint', minHeight: '400px', width: '100%' }}
+    >
       <div className="relative p-3 space-y-2">
-        {/* Header with logo */}
+        {/* Header with logo - fixed dimensions */}
         <div className="text-center space-y-1">
           <div className="inline-block">
-            <div className="relative">
-              <img 
-                src="/fun-profile-logo-small.webp" 
-                alt="Fun Profile Web3"
-                className="w-12 h-12 mx-auto rounded-full border border-yellow-400 shadow-lg"
-              />
-            </div>
+            <img 
+              src="/fun-profile-logo-small.webp" 
+              alt="Fun Profile Web3"
+              width={48}
+              height={48}
+              className="w-12 h-12 mx-auto rounded-full border border-yellow-400 shadow-lg"
+              loading="eager"
+            />
           </div>
           
           <h1 className="text-gold text-xl font-black tracking-wider drop-shadow-lg">
@@ -188,13 +184,13 @@ export const HonorBoard = () => {
           <p className="text-gold text-xs font-medium">TOP 5 TOTAL REWARD</p>
         </div>
 
-        {/* Top 5 Users */}
+        {/* Top 5 Users - fixed height items */}
         <div className="space-y-2">
           {topRewards.map((user, index) => (
             <UserRow key={user.id} user={user} rank={index + 1} />
           ))}
           {topRewards.length === 0 && (
-            <div className="text-center py-4 text-muted-foreground text-sm">
+            <div className="text-center py-4 text-muted-foreground text-sm" style={{ minHeight: '200px' }}>
               No data available yet
             </div>
           )}
