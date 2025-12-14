@@ -65,7 +65,14 @@
   body {
     @apply bg-background text-foreground;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    text-rendering: optimizeSpeed;
   }
+}
+
+/* Optimize text rendering for LCP */
+.whitespace-pre-wrap {
+  text-rendering: optimizeSpeed;
+  content-visibility: visible;
 }
 
 /* Facebook-style Card - with CSS containment for performance */
