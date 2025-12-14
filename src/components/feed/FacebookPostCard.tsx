@@ -28,6 +28,12 @@ import {
   Bookmark,
 } from 'lucide-react';
 
+interface PostStats {
+  reactions: { id: string; user_id: string; type: string }[];
+  commentCount: number;
+  shareCount: number;
+}
+
 interface FacebookPostCardProps {
   post: {
     id: string;
@@ -43,6 +49,7 @@ interface FacebookPostCardProps {
   };
   currentUserId: string;
   onPostDeleted: () => void;
+  initialStats?: PostStats; // Pre-fetched stats from parent
 }
 
 interface ReactionCount {
@@ -50,20 +57,44 @@ interface ReactionCount {
   count: number;
 }
 
-export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: FacebookPostCardProps) => {
+export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialStats }: FacebookPostCardProps) => {
   const navigate = useNavigate();
   const [showImageViewer, setShowImageViewer] = useState(false);
-  const [commentCount, setCommentCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(initialStats?.commentCount || 0);
   const [showComments, setShowComments] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [shareCount, setShareCount] = useState(0);
-  const [likeCount, setLikeCount] = useState(0);
+  const [shareCount, setShareCount] = useState(initialStats?.shareCount || 0);
+  const [likeCount, setLikeCount] = useState(initialStats?.reactions?.length || 0);
   const [currentReaction, setCurrentReaction] = useState<string | null>(null);
   const [reactionCounts, setReactionCounts] = useState<ReactionCount[]>([]);
 
+  // Initialize from pre-fetched stats (no individual queries needed!)
   useEffect(() => {
-    const fetchPostData = async () => {
-      // Fetch reactions with types
+    if (initialStats) {
+      const reactions = initialStats.reactions;
+      setLikeCount(reactions.length);
+      setCommentCount(initialStats.commentCount);
+      setShareCount(initialStats.shareCount);
+      
+      // Get current user's reaction
+      const userReaction = reactions.find((r) => r.user_id === currentUserId);
+      setCurrentReaction(userReaction?.type || null);
+
+      // Count reactions by type
+      const counts: Record<string, number> = {};
+      reactions.forEach((r) => {
+        counts[r.type] = (counts[r.type] || 0) + 1;
+      });
+      setReactionCounts(
+        Object.entries(counts).map(([type, count]) => ({ type, count }))
+      );
+    }
+  }, [initialStats, currentUserId]);
+
+  // Only subscribe to realtime for updates (not initial fetch)
+  useEffect(() => {
+    const handleRealtimeUpdate = async () => {
+      // Refetch only this post's data on realtime update
       const { data: reactions } = await supabase
         .from('reactions')
         .select('id, user_id, type')
@@ -72,12 +103,9 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: Faceboo
 
       if (reactions) {
         setLikeCount(reactions.length);
-        
-        // Get current user's reaction
         const userReaction = reactions.find((r) => r.user_id === currentUserId);
         setCurrentReaction(userReaction?.type || null);
 
-        // Count reactions by type
         const counts: Record<string, number> = {};
         reactions.forEach((r) => {
           counts[r.type] = (counts[r.type] || 0) + 1;
@@ -87,14 +115,12 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: Faceboo
         );
       }
 
-      // Fetch comment count
       const { count: commentsCount } = await supabase
         .from('comments')
         .select('*', { count: 'exact', head: true })
         .eq('post_id', post.id);
       setCommentCount(commentsCount || 0);
 
-      // Fetch share count
       const { count: sharesCount } = await supabase
         .from('shared_posts')
         .select('*', { count: 'exact', head: true })
@@ -102,9 +128,6 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: Faceboo
       setShareCount(sharesCount || 0);
     };
 
-    fetchPostData();
-
-    // Subscribe to realtime updates
     const channel = supabase
       .channel(`post-${post.id}`)
       .on(
@@ -115,7 +138,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: Faceboo
           table: 'reactions',
           filter: `post_id=eq.${post.id}`,
         },
-        () => fetchPostData()
+        handleRealtimeUpdate
       )
       .on(
         'postgres_changes',
@@ -125,7 +148,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: Faceboo
           table: 'comments',
           filter: `post_id=eq.${post.id}`,
         },
-        () => fetchPostData()
+        handleRealtimeUpdate
       )
       .subscribe();
 
