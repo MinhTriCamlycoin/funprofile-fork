@@ -1,14 +1,12 @@
-import { useEffect, useState, lazy, Suspense, memo, useCallback } from 'react';
+import { useEffect, useState, memo, useCallback, Suspense, lazy } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FacebookNavbar } from '@/components/layout/FacebookNavbar';
+import { FacebookCreatePost } from '@/components/feed/FacebookCreatePost';
+import { FacebookPostCard } from '@/components/feed/FacebookPostCard';
+import { FacebookLeftSidebar } from '@/components/feed/FacebookLeftSidebar';
+import { FacebookRightSidebar } from '@/components/feed/FacebookRightSidebar';
+import { StoriesBar } from '@/components/feed/StoriesBar';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Lazy load heavy components
-const FacebookCreatePost = lazy(() => import('@/components/feed/FacebookCreatePost').then(m => ({ default: m.FacebookCreatePost })));
-const FacebookPostCard = lazy(() => import('@/components/feed/FacebookPostCard').then(m => ({ default: m.FacebookPostCard })));
-const FacebookLeftSidebar = lazy(() => import('@/components/feed/FacebookLeftSidebar').then(m => ({ default: m.FacebookLeftSidebar })));
-const FacebookRightSidebar = lazy(() => import('@/components/feed/FacebookRightSidebar').then(m => ({ default: m.FacebookRightSidebar })));
-const StoriesBar = lazy(() => import('@/components/feed/StoriesBar').then(m => ({ default: m.StoriesBar })));
 
 // Lightweight skeleton components
 const SidebarSkeleton = memo(() => (
@@ -22,15 +20,6 @@ const SidebarSkeleton = memo(() => (
   </div>
 ));
 SidebarSkeleton.displayName = 'SidebarSkeleton';
-
-const StoriesSkeleton = memo(() => (
-  <div className="fb-card p-4 mb-4">
-    <div className="flex gap-2 overflow-hidden">
-      {[1, 2, 3, 4].map(i => <Skeleton key={i} className="w-24 h-40 rounded-lg flex-shrink-0" />)}
-    </div>
-  </div>
-));
-StoriesSkeleton.displayName = 'StoriesSkeleton';
 
 const PostSkeleton = memo(() => (
   <div className="fb-card p-4">
@@ -59,7 +48,7 @@ const Feed = () => {
         .from('posts')
         .select(`*, profiles!posts_user_id_fkey (username, avatar_url)`)
         .order('created_at', { ascending: false })
-        .limit(20); // Limit initial load
+        .limit(20);
 
       if (error) {
         setPosts([]);
@@ -104,28 +93,18 @@ const Feed = () => {
       <main className="pt-14">
         <div className="max-w-screen-2xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 py-4">
-            {/* Left Sidebar - Deferred */}
+            {/* Left Sidebar */}
             <aside className="hidden lg:block lg:col-span-3">
               <div className="sticky top-[72px] max-h-[calc(100vh-88px)] overflow-y-auto pr-2">
-                <Suspense fallback={<SidebarSkeleton />}>
-                  <FacebookLeftSidebar />
-                </Suspense>
+                <FacebookLeftSidebar />
               </div>
             </aside>
 
             {/* Main Feed */}
             <div className="lg:col-span-6">
-              {/* Stories - Deferred */}
-              <Suspense fallback={<StoriesSkeleton />}>
-                <StoriesBar />
-              </Suspense>
+              <StoriesBar />
 
-              {/* Create Post */}
-              {currentUserId && (
-                <Suspense fallback={<Skeleton className="h-24 w-full mb-4 rounded-lg" />}>
-                  <FacebookCreatePost onPostCreated={fetchPosts} />
-                </Suspense>
-              )}
+              {currentUserId && <FacebookCreatePost onPostCreated={fetchPosts} />}
 
               {!currentUserId && (
                 <div className="fb-card p-4 mb-4 text-center">
@@ -133,7 +112,6 @@ const Feed = () => {
                 </div>
               )}
 
-              {/* Posts */}
               {loading ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map(i => <PostSkeleton key={i} />)}
@@ -143,27 +121,23 @@ const Feed = () => {
                   <p className="text-muted-foreground">Chưa có bài viết nào</p>
                 </div>
               ) : (
-                <Suspense fallback={<div className="space-y-4">{[1, 2].map(i => <PostSkeleton key={i} />)}</div>}>
-                  <div className="space-y-4">
-                    {posts.map(post => (
-                      <FacebookPostCard
-                        key={post.id}
-                        post={post}
-                        currentUserId={currentUserId}
-                        onPostDeleted={fetchPosts}
-                      />
-                    ))}
-                  </div>
-                </Suspense>
+                <div className="space-y-4">
+                  {posts.map(post => (
+                    <FacebookPostCard
+                      key={post.id}
+                      post={post}
+                      currentUserId={currentUserId}
+                      onPostDeleted={fetchPosts}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Right Sidebar - Deferred */}
+            {/* Right Sidebar */}
             <aside className="hidden lg:block lg:col-span-3">
               <div className="sticky top-[72px] max-h-[calc(100vh-88px)] overflow-y-auto pl-2">
-                <Suspense fallback={<SidebarSkeleton />}>
-                  <FacebookRightSidebar />
-                </Suspense>
+                <FacebookRightSidebar />
               </div>
             </aside>
           </div>
