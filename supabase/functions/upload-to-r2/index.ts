@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -11,54 +9,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('Missing authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
-    }
-
-    // Create Supabase client with user's auth token
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-    
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Verify the user is authenticated
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
-    if (authError || !user) {
-      console.error('Authentication failed:', authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
-    }
-
     const { file, key, contentType } = await req.json();
-
-    // Validate required fields
-    if (!file || !key || !contentType) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: file, key, contentType' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // Validate file key format (should start with user's folder or allowed paths)
-    const allowedPrefixes = [user.id, 'posts/', 'avatars/', 'comment-media/', 'videos/'];
-    const isValidKey = allowedPrefixes.some(prefix => key.includes(prefix) || key.startsWith(prefix));
-    if (!isValidKey) {
-      console.error('Invalid key path:', key, 'for user:', user.id);
-      return new Response(
-        JSON.stringify({ error: 'Invalid file path' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
-      );
-    }
 
     const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
     const CLOUDFLARE_ACCESS_KEY_ID = Deno.env.get('CLOUDFLARE_ACCESS_KEY_ID');
@@ -172,7 +123,7 @@ Deno.serve(async (req) => {
 
     const url = `${CLOUDFLARE_R2_PUBLIC_URL}/${key}`;
 
-    console.log(`Successfully uploaded to R2 by user ${user.id}: ${key}`);
+    console.log(`Successfully uploaded to R2: ${key}`);
 
     return new Response(
       JSON.stringify({ url, key }),

@@ -73,14 +73,11 @@ export const StoriesBar = memo(() => {
   ];
 
   return (
-    <div className="fb-card p-4 mb-4" style={{ contain: 'layout style', minHeight: '208px' }}>
+    <div className="fb-card p-4 mb-4">
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {/* Create Story Card - fixed dimensions */}
+        {/* Create Story Card */}
         {currentUser && (
-          <div 
-            className="flex-shrink-0 rounded-xl overflow-hidden relative cursor-pointer group"
-            style={{ width: '112px', height: '192px', contain: 'layout style paint' }}
-          >
+          <div className="flex-shrink-0 w-28 h-48 rounded-xl overflow-hidden relative cursor-pointer group">
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60">
               {currentUser.avatar_url ? (
                 <LazyImage
@@ -104,21 +101,20 @@ export const StoriesBar = memo(() => {
           </div>
         )}
 
-        {/* Story Cards - fixed dimensions */}
+        {/* Story Cards */}
         {stories.map((story, index) => (
           <div
             key={story.id}
             onClick={() => navigate(`/profile/${story.user_id}`)}
-            className="flex-shrink-0 rounded-xl overflow-hidden relative cursor-pointer group"
-            style={{ width: '112px', height: '192px', contain: 'layout style paint' }}
+            className="flex-shrink-0 w-28 h-48 rounded-xl overflow-hidden relative cursor-pointer group"
           >
             <div className={`absolute inset-0 bg-gradient-to-b ${gradientColors[index % gradientColors.length]} opacity-80`} />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
             
-            {/* User Avatar - fixed size */}
+            {/* User Avatar */}
             <div className="absolute top-3 left-3">
               <Avatar className="w-10 h-10 ring-4 ring-primary">
-                <AvatarImage src={story.avatar_url || ''} alt={story.username} />
+                <AvatarImage src={story.avatar_url || ''} alt={`Ảnh đại diện của ${story.username}`} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                   {story.username?.[0]?.toUpperCase()}
                 </AvatarFallback>

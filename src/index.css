@@ -93,41 +93,38 @@
   @apply text-primary;
 }
 
-/* Scrollbar Styling - minimal */
+/* Scrollbar Styling */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.2);
-  border-radius: 3px;
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
 }
 
-/* Story Card - fixed dimensions for CLS */
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Story Card */
 .story-card {
-  @apply relative rounded-xl overflow-hidden cursor-pointer;
-  width: 112px;
-  height: 192px;
-  contain: layout style paint;
+  @apply relative w-28 h-48 rounded-xl overflow-hidden cursor-pointer;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.6) 100%);
 }
 
-/* Reaction Animation - GPU accelerated */
-.reaction-pop {
-  animation: reaction-pop 0.2s ease-out;
-  will-change: transform;
-}
-
+/* Facebook Reaction Animation */
 @keyframes reaction-pop {
   0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
 
-/* Optimize paint */
-.fb-card {
-  contain: layout style;
-}
-
-/* Reduce layout shifts */
-img, video {
-  content-visibility: auto;
+.reaction-pop {
+  animation: reaction-pop 0.3s ease-out;
 }
