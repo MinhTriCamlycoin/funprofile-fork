@@ -187,7 +187,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: Faceboo
 
   return (
     <>
-      <div className="fb-card mb-4 overflow-hidden">
+      <article className="fb-card mb-4 overflow-hidden" style={{ contain: 'layout style' }}>
         {/* Post Header */}
         <div className="flex items-start justify-between p-4">
           <div className="flex items-center gap-3">
@@ -325,7 +325,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted }: Faceboo
             />
           </div>
         )}
-      </div>
+      </article>
 
       <ImageViewer
         imageUrl={post.image_url || ''}

@@ -123,9 +123,9 @@ export const FacebookRightSidebar = () => {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Honor Board */}
-      <div className="fb-card p-4">
+    <div className="space-y-4" style={{ contain: 'layout style' }}>
+      {/* Honor Board - fixed dimensions to prevent CLS */}
+      <div className="fb-card p-4" style={{ minHeight: '380px', contain: 'layout style' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-gold" />
@@ -140,13 +140,13 @@ export const FacebookRightSidebar = () => {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-3" style={{ minHeight: '280px' }}>
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2" style={{ minHeight: '200px' }}>
             {topUsers.map((user, index) => (
               <button
                 key={user.id}
@@ -188,15 +188,18 @@ export const FacebookRightSidebar = () => {
         </Button>
       </div>
 
-      {/* Sponsored */}
-      <div className="fb-card p-4">
+      {/* Sponsored - optimized with fixed dimensions */}
+      <div className="fb-card p-4" style={{ contain: 'layout style' }}>
         <h3 className="font-semibold text-muted-foreground mb-3">Được tài trợ</h3>
         <div className="flex gap-3 cursor-pointer hover:bg-secondary rounded-lg p-2 -m-2 transition-colors">
           <img
             src="/fun-profile-logo-thumb-optimized.webp"
-            alt="Ad"
+            alt="FUN Profile Ad"
+            width={128}
+            height={128}
             className="w-32 h-32 rounded-lg object-cover"
-            fetchPriority="high"
+            loading="lazy"
+            decoding="async"
           />
           <div>
             <p className="font-semibold text-sm">FUN Profile - Mạng xã hội Web3</p>

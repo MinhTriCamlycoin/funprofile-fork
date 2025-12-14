@@ -20,37 +20,40 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    sourcemap: mode === 'development',
+    sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Core React - load first
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-router': ['react-router-dom'],
-          
-          // Data layer - separate chunk
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          
-          // UI libraries - separate chunk
-          'vendor-ui-core': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-tooltip',
-            '@radix-ui/react-avatar',
-          ],
-          'vendor-ui-forms': [
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-label',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tabs',
-          ],
-          
-          // Heavy libraries - lazy load
-          'vendor-web3': ['wagmi', 'viem', '@rainbow-me/rainbowkit'],
-          'vendor-charts': ['recharts'],
-          'vendor-utils': ['date-fns', 'clsx', 'tailwind-merge'],
+        manualChunks(id) {
+          // Web3 libraries - completely deferred, only on Wallet page
+          if (id.includes('wagmi') || id.includes('viem') || id.includes('rainbowkit')) {
+            return 'vendor-web3';
+          }
+          // Charts - only on pages with charts
+          if (id.includes('recharts')) {
+            return 'vendor-charts';
+          }
+          // Core React - smallest critical chunk
+          if (id.includes('react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('react-router')) {
+            return 'vendor-router';
+          }
+          // Data layer
+          if (id.includes('@tanstack/react-query')) {
+            return 'vendor-query';
+          }
+          if (id.includes('@supabase')) {
+            return 'vendor-supabase';
+          }
+          // UI components - split smaller
+          if (id.includes('@radix-ui')) {
+            return 'vendor-ui';
+          }
+          // Utils
+          if (id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge')) {
+            return 'vendor-utils';
+          }
         },
       },
     },
@@ -58,11 +61,14 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     cssMinify: true,
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 300,
+    chunkSizeWarningLimit: 150,
     // Aggressive tree shaking
     treeshake: {
       moduleSideEffects: false,
+      propertyReadSideEffects: false,
     },
+    // Smaller output
+    reportCompressedSize: false,
   },
   optimizeDeps: {
     include: [
