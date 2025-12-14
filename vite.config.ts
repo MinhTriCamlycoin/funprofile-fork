@@ -47,10 +47,11 @@ export default defineConfig(({ mode }) => ({
             '@radix-ui/react-tabs',
           ],
           
-          // Heavy libraries - lazy load
-          'vendor-web3': ['wagmi', 'viem', '@rainbow-me/rainbowkit'],
+          // Charts and utils - loaded when needed
           'vendor-charts': ['recharts'],
           'vendor-utils': ['date-fns', 'clsx', 'tailwind-merge'],
+          // Note: wagmi, viem, rainbowkit are NOT in manualChunks
+          // They will be bundled with the lazy-loaded Wallet page chunk
         },
       },
     },
