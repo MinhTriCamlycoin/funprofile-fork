@@ -185,10 +185,16 @@ const AdminMigration = () => {
       }> = [];
 
       const isSupabaseUrl = (url: string | null) => {
-        return url && (
+        if (!url) return false;
+        // Skip if already R2
+        if (r2PublicUrl && url.includes(r2PublicUrl)) return false;
+        // Check for Supabase storage patterns
+        return (
+          url.includes('.supabase.co/storage') ||
+          url.includes('.supabase.in/storage') ||
           url.includes('supabase.co/storage') ||
           url.includes('supabase.in/storage')
-        ) && !url.includes(r2PublicUrl);
+        );
       };
 
       posts?.forEach(post => {
