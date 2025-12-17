@@ -221,9 +221,9 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
           </div>
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-2 gap-1.5 sm:gap-2 flex-1">
+          <div className="grid grid-cols-2 gap-2 flex-1">
             {/* Left Column - Posts, Reactions, Comments, Shares */}
-            <div className="space-y-1 sm:space-y-1.5">
+            <div className="space-y-2">
               <StatRow 
                 icon={<ArrowUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                 label="Posts"
@@ -247,7 +247,7 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
             </div>
 
             {/* Right Column - Friends, NFTs, Claimable, Claimed */}
-            <div className="space-y-1 sm:space-y-1.5">
+            <div className="space-y-2">
               <StatRow 
                 icon={<Users className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                 label="Friends"
@@ -272,7 +272,7 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
           </div>
 
           {/* Full Width Total Rows */}
-          <div className="mt-1.5 sm:mt-2 space-y-1 sm:space-y-1.5">
+          <div className="mt-2 space-y-2">
             <StatRow 
               icon={<BadgeDollarSign className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
               label="Total Reward"
