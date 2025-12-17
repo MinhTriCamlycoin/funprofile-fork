@@ -3,7 +3,7 @@ import { Camera } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { uploadToR2, deleteFromR2 } from '@/utils/r2Upload';
+import { uploadToR2 } from '@/utils/r2Upload';
 import { AvatarCropper } from './AvatarCropper';
 
 interface AvatarEditorProps {
@@ -61,16 +61,6 @@ export function AvatarEditor({
     try {
       const file = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
       const result = await uploadToR2(file, 'avatars', `${userId}/avatar-${Date.now()}.jpg`);
-
-      // Delete old avatar from R2 if exists
-      if (currentAvatarUrl && currentAvatarUrl.includes('r2.dev')) {
-        try {
-          const oldKey = currentAvatarUrl.split('/').slice(-2).join('/');
-          await deleteFromR2(oldKey);
-        } catch (error) {
-          console.error('Error deleting old avatar:', error);
-        }
-      }
 
       // Update profile in database
       const { error } = await supabase
