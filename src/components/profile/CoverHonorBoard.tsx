@@ -112,21 +112,8 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
 
   return (
     <div className="absolute right-2 sm:right-4 top-2 sm:top-4 bottom-2 sm:bottom-4 w-[48%] sm:w-[45%] max-w-[420px] min-w-[280px]">
-      {/* Main Container - Dark Glassmorphism */}
-      <div className="h-full rounded-2xl overflow-hidden border-2 border-yellow-500/70 bg-gradient-to-br from-green-900/80 via-green-800/70 to-black/80 backdrop-blur-md shadow-[0_0_30px_rgba(34,197,94,0.3),0_0_60px_rgba(250,204,21,0.2)]">
-        
-        {/* Sparkle effects */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-3 left-3 w-1.5 h-1.5 bg-white rounded-full animate-pulse opacity-60" />
-          <div className="absolute top-6 right-6 w-1 h-1 bg-yellow-300 rounded-full animate-pulse opacity-70" style={{ animationDelay: '0.3s' }} />
-          <div className="absolute bottom-8 left-8 w-1 h-1 bg-green-300 rounded-full animate-pulse opacity-60" style={{ animationDelay: '0.6s' }} />
-          <div className="absolute bottom-4 right-10 w-1.5 h-1.5 bg-white rounded-full animate-pulse opacity-50" style={{ animationDelay: '0.9s' }} />
-          <div className="absolute top-1/2 left-4 w-1 h-1 bg-yellow-200 rounded-full animate-pulse opacity-40" style={{ animationDelay: '1.2s' }} />
-        </div>
-
-        {/* Inner glow border */}
-        <div className="absolute inset-0 rounded-2xl border border-green-400/20 pointer-events-none" />
-
+      {/* Main Container - Transparent with gold border */}
+      <div className="h-full rounded-2xl overflow-hidden border-2 border-yellow-400 bg-transparent backdrop-blur-sm">
         <div className="relative h-full flex flex-col p-3 sm:p-4">
           {/* Header */}
           <div className="text-center space-y-1 mb-3">
@@ -156,7 +143,7 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
             
             {/* User info */}
             <div className="flex items-center justify-center gap-2">
-              <span className="text-white text-sm font-semibold truncate max-w-[120px]">
+              <span className="text-white text-sm font-semibold truncate max-w-[120px] drop-shadow-[0_0_4px_rgba(0,0,0,0.8)]">
                 {username?.toUpperCase() || 'USER'}
               </span>
               <Avatar className="w-7 h-7 sm:w-8 sm:h-8 border-2 border-yellow-400/70 shadow-[0_0_10px_rgba(250,204,21,0.4)]">
@@ -169,12 +156,9 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
           </div>
 
           {/* Two Column Layout */}
-          <div className="flex-1 grid grid-cols-2 gap-2 sm:gap-3 overflow-hidden">
-            {/* Left Column - Activity Stats */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            {/* Left Column - Posts, Reactions, Comments */}
             <div className="space-y-1.5 sm:space-y-2">
-              <h3 className="text-[10px] sm:text-xs text-green-300/80 font-semibold uppercase tracking-wider text-center mb-1">
-                Activity
-              </h3>
               <StatRow 
                 icon={<ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 label="Posts"
@@ -190,18 +174,15 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
                 label="Comments"
                 value={stats.comments_count}
               />
+            </div>
+
+            {/* Right Column - Shares, Claimable, Claimed */}
+            <div className="space-y-1.5 sm:space-y-2">
               <StatRow 
                 icon={<Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 label="Shares"
                 value={stats.shares_count}
               />
-            </div>
-
-            {/* Right Column - Financial Stats */}
-            <div className="space-y-1.5 sm:space-y-2">
-              <h3 className="text-[10px] sm:text-xs text-yellow-300/80 font-semibold uppercase tracking-wider text-center mb-1">
-                Rewards
-              </h3>
               <StatRow 
                 icon={<Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 label="Claimable"
@@ -212,17 +193,21 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
                 label="Claimed"
                 value={stats.claimed}
               />
-              <StatRow 
-                icon={<BadgeDollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Total Reward"
-                value={stats.total_reward}
-              />
-              <StatRow 
-                icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Total Money"
-                value={stats.total_money}
-              />
             </div>
+          </div>
+
+          {/* Full Width Total Rows */}
+          <div className="mt-2 sm:mt-3 space-y-1.5 sm:space-y-2">
+            <StatRow 
+              icon={<BadgeDollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              label="Total Reward"
+              value={stats.total_reward}
+            />
+            <StatRow 
+              icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              label="Total Money"
+              value={stats.total_money}
+            />
           </div>
         </div>
       </div>
