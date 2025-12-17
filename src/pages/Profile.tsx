@@ -13,7 +13,8 @@ import { ProfileHonorBoard } from '@/components/profile/ProfileHonorBoard';
 import { Button } from '@/components/ui/button';
 import { LazyImage } from '@/components/ui/LazyImage';
 import { CoverPhotoEditor } from '@/components/profile/CoverPhotoEditor';
-import { Camera, Plus, PenSquare, MoreHorizontal, MapPin, Briefcase, GraduationCap, Heart, Clock } from 'lucide-react';
+import { AvatarEditor } from '@/components/profile/AvatarEditor';
+import { Plus, PenSquare, MoreHorizontal, MapPin, Briefcase, GraduationCap, Heart, Clock } from 'lucide-react';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -194,19 +195,22 @@ const Profile = () => {
           <div className="max-w-5xl mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center md:items-end gap-4 pb-4 -mt-8 md:-mt-16 relative">
               {/* Avatar */}
-              <div className="relative">
+              {isOwnProfile ? (
+                <AvatarEditor
+                  userId={currentUserId}
+                  currentAvatarUrl={profile?.avatar_url}
+                  username={profile?.username}
+                  onAvatarUpdated={(newUrl) => setProfile({ ...profile, avatar_url: newUrl })}
+                  size="large"
+                />
+              ) : (
                 <Avatar className="w-32 h-32 md:w-44 md:h-44 border-4 border-white shadow-lg">
                   {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
                   <AvatarFallback className="text-4xl md:text-5xl bg-primary text-white">
                     {profile?.username?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                {isOwnProfile && (
-                  <button className="absolute bottom-2 right-2 w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
-                    <Camera className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
+              )}
 
               {/* Name and Stats */}
               <div className="flex-1 text-center md:text-left md:pb-4">
