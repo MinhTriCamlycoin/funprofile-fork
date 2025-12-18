@@ -30,77 +30,33 @@ const Leaderboard = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url, full_name');
+      // Use optimized RPC function that calculates all rewards in a single query
+      const { data, error } = await supabase.rpc('get_user_rewards', { limit_count: 100 });
 
       if (error) throw error;
 
-      const usersWithRewards = await Promise.all(
-        profiles.map(async (profile) => {
-          const { data: posts } = await supabase
-            .from('posts')
-            .select('id')
-            .eq('user_id', profile.id);
+      const usersWithRewards: LeaderboardUser[] = (data || []).map((user: {
+        id: string;
+        username: string;
+        avatar_url: string | null;
+        posts_count: number;
+        comments_count: number;
+        reactions_count: number;
+        friends_count: number;
+        total_reward: number;
+      }) => ({
+        id: user.id,
+        username: user.username,
+        avatar_url: user.avatar_url,
+        full_name: null,
+        posts_count: user.posts_count || 0,
+        comments_count: user.comments_count || 0,
+        reactions_count: user.reactions_count || 0,
+        friends_count: user.friends_count || 0,
+        total_reward: user.total_reward || 0
+      }));
 
-          const { count: commentsCount } = await supabase
-            .from('comments')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', profile.id);
-
-          const { count: reactionsCount } = await supabase
-            .from('reactions')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', profile.id);
-
-          const { count: friendsCount } = await supabase
-            .from('friendships')
-            .select('*', { count: 'exact', head: true })
-            .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`)
-            .eq('status', 'accepted');
-
-          const { count: sharedCount } = await supabase
-            .from('shared_posts')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', profile.id);
-
-          let total_reward = 50000;
-          const posts_count = posts?.length || 0;
-          total_reward += posts_count * 10000;
-          total_reward += (commentsCount || 0) * 5000;
-          total_reward += (friendsCount || 0) * 50000;
-          total_reward += (sharedCount || 0) * 20000;
-
-          if (posts && posts.length > 0) {
-            for (const post of posts) {
-              const { count: postReactionsCount } = await supabase
-                .from('reactions')
-                .select('*', { count: 'exact', head: true })
-                .eq('post_id', post.id);
-
-              const reactionsOnPost = postReactionsCount || 0;
-              if (reactionsOnPost >= 3) {
-                total_reward += 30000 + (reactionsOnPost - 3) * 1000;
-              }
-            }
-          }
-
-          return {
-            id: profile.id,
-            username: profile.username,
-            avatar_url: profile.avatar_url,
-            full_name: profile.full_name,
-            posts_count,
-            comments_count: commentsCount || 0,
-            reactions_count: reactionsCount || 0,
-            friends_count: friendsCount || 0,
-            total_reward
-          };
-        })
-      );
-
-      const sortedUsers = usersWithRewards.sort((a, b) => b.total_reward - a.total_reward);
-      setUsers(sortedUsers);
+      setUsers(usersWithRewards);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
     } finally {
