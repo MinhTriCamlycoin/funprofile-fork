@@ -1,6 +1,49 @@
 export const translations = {
   en: {
-    // Auth
+    // Auth Page
+    authWelcomeBack: 'Welcome Back',
+    authSignInTitle: 'Sign in to your account',
+    authCreateAccount: 'Join FUN Profile',
+    authJoinUs: 'Create your account',
+    authEmail: 'EMAIL',
+    authEmailPlaceholder: 'Enter your email',
+    authPassword: 'PASSWORD',
+    authPasswordPlaceholder: 'Enter your password',
+    authUsername: 'USERNAME',
+    authUsernamePlaceholder: 'Choose a username',
+    authSignIn: 'SIGN IN',
+    authSignUp: 'SIGN UP',
+    authForgotPassword: 'Forgot password?',
+    authNoAccount: "Don't have an account?",
+    authHaveAccount: 'Already have an account?',
+    authSignUpLink: 'Sign up',
+    authSignInLink: 'Sign in',
+    authOr: 'OR',
+    authUseWithoutAccount: 'Use without account',
+    authSendResetEmail: 'Send Reset Email',
+    authInitializing: 'Initializing...',
+    
+    // Auth page branding
+    authBrandTitle: 'FUN Profile',
+    authBrandDescription: 'Connect with friends and the world around you on FUN Profile.',
+    authCreatePage: 'Create a Page for a celebrity, brand or business.',
+    
+    // Error messages
+    authErrorInvalidEmail: 'Please enter a valid email address',
+    authErrorPasswordShort: 'Password must be at least 6 characters',
+    authErrorUsernameShort: 'Username must be at least 3 characters',
+    authErrorUsernameLong: 'Username must be less than 30 characters',
+    authErrorUsernameReserved: 'This username is reserved',
+    authErrorWrongPassword: 'Incorrect password. Please try again.',
+    authErrorEmailNotFound: 'No account found with this email.',
+    authErrorEmailExists: 'An account with this email already exists.',
+    authErrorGeneric: 'Authentication failed',
+    
+    // Success messages
+    authSuccessSignUp: 'Account created! Please check your email.',
+    authSuccessPasswordReset: 'Password reset email sent! Please check your inbox.',
+    
+    // Auth general
     signIn: 'Sign In',
     signUp: 'Sign Up',
     signOut: 'Sign Out',
@@ -194,13 +237,60 @@ export const translations = {
     searchPlaceholder: 'Search FUN Profile...',
     
     // Footer
+    footerSignUp: 'Sign up',
+    footerSignIn: 'Sign in',
+    footerHelp: 'Help',
+    footerCopyright: 'FUN Profile © 2025',
     privacyPolicy: 'Privacy Policy',
     termsOfService: 'Terms of Service',
     allRightsReserved: 'All rights reserved',
   },
   
   vi: {
-    // Auth
+    // Auth Page
+    authWelcomeBack: 'Chào Mừng Trở Lại',
+    authSignInTitle: 'Đăng nhập vào tài khoản',
+    authCreateAccount: 'Gia Nhập FUN Profile',
+    authJoinUs: 'Tạo tài khoản của bạn',
+    authEmail: 'EMAIL',
+    authEmailPlaceholder: 'Nhập email của bạn',
+    authPassword: 'MẬT KHẨU',
+    authPasswordPlaceholder: 'Nhập mật khẩu',
+    authUsername: 'TÊN NGƯỜI DÙNG',
+    authUsernamePlaceholder: 'Chọn tên người dùng',
+    authSignIn: 'ĐĂNG NHẬP',
+    authSignUp: 'ĐĂNG KÝ',
+    authForgotPassword: 'Quên mật khẩu?',
+    authNoAccount: 'Chưa có tài khoản?',
+    authHaveAccount: 'Đã có tài khoản?',
+    authSignUpLink: 'Đăng ký',
+    authSignInLink: 'Đăng nhập',
+    authOr: 'HOẶC',
+    authUseWithoutAccount: 'Dùng không cần tài khoản',
+    authSendResetEmail: 'Gửi Email Đặt Lại',
+    authInitializing: 'Đang khởi tạo...',
+    
+    // Auth page branding
+    authBrandTitle: 'FUN Profile',
+    authBrandDescription: 'Kết nối với bạn bè và thế giới xung quanh bạn trên FUN Profile.',
+    authCreatePage: 'Tạo Trang dành cho người nổi tiếng, thương hiệu hoặc doanh nghiệp.',
+    
+    // Error messages
+    authErrorInvalidEmail: 'Vui lòng nhập email hợp lệ',
+    authErrorPasswordShort: 'Mật khẩu phải có ít nhất 6 ký tự',
+    authErrorUsernameShort: 'Tên người dùng phải có ít nhất 3 ký tự',
+    authErrorUsernameLong: 'Tên người dùng phải ít hơn 30 ký tự',
+    authErrorUsernameReserved: 'Tên người dùng này đã được bảo lưu',
+    authErrorWrongPassword: 'Mật khẩu không đúng. Vui lòng thử lại.',
+    authErrorEmailNotFound: 'Không tìm thấy tài khoản với email này.',
+    authErrorEmailExists: 'Email này đã được sử dụng.',
+    authErrorGeneric: 'Xác thực thất bại',
+    
+    // Success messages
+    authSuccessSignUp: 'Tạo tài khoản thành công! Vui lòng kiểm tra email.',
+    authSuccessPasswordReset: 'Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư.',
+    
+    // Auth general
     signIn: 'Đăng nhập',
     signUp: 'Đăng ký',
     signOut: 'Đăng xuất',
@@ -394,6 +484,10 @@ export const translations = {
     searchPlaceholder: 'Tìm kiếm FUN Profile...',
     
     // Footer
+    footerSignUp: 'Đăng ký',
+    footerSignIn: 'Đăng nhập',
+    footerHelp: 'Trợ giúp',
+    footerCopyright: 'FUN Profile © 2025',
     privacyPolicy: 'Chính sách bảo mật',
     termsOfService: 'Điều khoản dịch vụ',
     allRightsReserved: 'Đã đăng ký bản quyền',

@@ -2,9 +2,12 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthForm } from '@/components/auth/AuthForm';
+import { useLanguage } from '@/i18n/LanguageContext';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -26,7 +29,12 @@ const Auth = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4 relative">
+      {/* Language Switcher - Top Right */}
+      <div className="absolute top-4 right-4 z-50">
+        <LanguageSwitcher variant="full" />
+      </div>
+
       <div className="w-full max-w-5xl grid md:grid-cols-2 gap-8 items-center">
         {/* Left Side - Branding */}
         <div className="text-center md:text-left">
@@ -40,21 +48,19 @@ const Auth = () => {
             />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
-            FUN Profile
+            {t('authBrandTitle')}
           </h1>
           <p className="text-xl md:text-2xl text-gray-600">
-            Kết nối với bạn bè và thế giới xung quanh bạn trên FUN Profile.
+            {t('authBrandDescription')}
           </p>
         </div>
 
         {/* Right Side - Auth Form */}
         <div className="w-full max-w-md mx-auto">
-          <div className="bg-white p-8 rounded-xl shadow-lg">
-            <AuthForm />
-          </div>
+          <AuthForm />
           
           <p className="text-center mt-6 text-sm text-muted-foreground">
-            <strong>Tạo Trang</strong> dành cho người nổi tiếng, thương hiệu hoặc doanh nghiệp.
+            <strong>{t('authCreatePage')}</strong>
           </p>
         </div>
       </div>
@@ -70,10 +76,10 @@ const Auth = () => {
             <a href="#" className="hover:underline">한국어</a>
           </div>
           <div className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground mt-2">
-            <a href="#" className="hover:underline">Đăng ký</a>
-            <a href="#" className="hover:underline">Đăng nhập</a>
-            <a href="#" className="hover:underline">Trợ giúp</a>
-            <span>FUN Profile © 2025</span>
+            <a href="#" className="hover:underline">{t('footerSignUp')}</a>
+            <a href="#" className="hover:underline">{t('footerSignIn')}</a>
+            <a href="#" className="hover:underline">{t('footerHelp')}</a>
+            <span>{t('footerCopyright')}</span>
           </div>
         </div>
       </div>
