@@ -16,6 +16,7 @@ import {
   Heart,
   Flag,
   Wallet,
+  Sparkles,
 } from 'lucide-react';
 import funEcosystemLogo from '@/assets/fun-ecosystem-logo.webp';
 import funFarmLogo from '@/assets/fun-farm-logo.webp';
@@ -67,28 +68,39 @@ export const FacebookLeftSidebar = () => {
 
   const shortcuts = [
     { 
+      name: 'Law of Light', 
+      avatar: '/fun-profile-logo-40.webp',
+      path: '/law-of-light?view=true',
+      isExternal: false,
+      isSpecial: true
+    },
+    { 
       name: 'About FUN Profile', 
       avatar: '/fun-profile-logo-40.webp',
       path: '/about',
-      isExternal: false
+      isExternal: false,
+      isSpecial: false
     },
     { 
       name: 'FUN Play', 
       avatar: '/fun-play-logo-36.webp',
       path: 'https://play.fun.rich',
-      isExternal: true
+      isExternal: true,
+      isSpecial: false
     },
     { 
       name: 'FUN Planet', 
       avatar: '/fun-planet-logo-36.webp',
       path: 'https://planet.fun.rich',
-      isExternal: true
+      isExternal: true,
+      isSpecial: false
     },
     { 
       name: 'FUN Farm', 
       avatar: funFarmLogo,
       path: 'https://farm.fun.rich',
-      isExternal: true
+      isExternal: true,
+      isSpecial: false
     },
   ];
 
@@ -117,17 +129,37 @@ export const FacebookLeftSidebar = () => {
                   navigate(shortcut.path);
                 }
               }}
-              className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-secondary hover:shadow-[0_0_15px_rgba(250,204,21,0.4)] transition-all duration-300 group"
+              className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all duration-300 group ${
+                shortcut.isSpecial 
+                  ? 'bg-gradient-to-r from-yellow-400/10 to-amber-400/10 hover:from-yellow-400/20 hover:to-amber-400/20 hover:shadow-[0_0_20px_rgba(250,204,21,0.5)] border border-yellow-400/30' 
+                  : 'hover:bg-secondary hover:shadow-[0_0_15px_rgba(250,204,21,0.4)]'
+              }`}
             >
-              <img
-                src={shortcut.avatar}
-                alt={shortcut.name}
-                width={36}
-                height={36}
-                loading="lazy"
-                className="w-9 h-9 rounded-lg object-cover group-hover:shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-shadow duration-300"
-              />
-              <span className="font-medium text-sm group-hover:text-primary transition-colors duration-300">{shortcut.name}</span>
+              {shortcut.isSpecial ? (
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                     style={{
+                       background: 'radial-gradient(circle, rgba(250,204,21,0.3) 0%, rgba(250,204,21,0.1) 100%)',
+                       boxShadow: '0 0 15px rgba(250,204,21,0.4)'
+                     }}>
+                  <Sparkles className="w-5 h-5 text-yellow-400" />
+                </div>
+              ) : (
+                <img
+                  src={shortcut.avatar}
+                  alt={shortcut.name}
+                  width={36}
+                  height={36}
+                  loading="lazy"
+                  className="w-9 h-9 rounded-lg object-cover group-hover:shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-shadow duration-300"
+                />
+              )}
+              <span className={`font-medium text-sm transition-colors duration-300 ${
+                shortcut.isSpecial 
+                  ? 'text-yellow-400 group-hover:text-yellow-300 font-semibold' 
+                  : 'group-hover:text-primary'
+              }`}>
+                {shortcut.name}
+              </span>
             </button>
           ))}
         </div>

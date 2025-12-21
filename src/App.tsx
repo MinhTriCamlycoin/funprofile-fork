@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { LawOfLightGuard } from "@/components/auth/LawOfLightGuard";
 
 // Lazy load pages for code splitting
 const Auth = lazy(() => import("./pages/Auth"));
@@ -18,6 +19,7 @@ const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const AdminMigration = lazy(() => import("./pages/AdminMigration"));
 const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const LawOfLight = lazy(() => import("./pages/LawOfLight"));
 
 // Optimized QueryClient with caching
 const queryClient = new QueryClient({
@@ -50,20 +52,23 @@ function App() {
           <Sonner />
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<Feed />} />
-                <Route path="/friends" element={<Friends />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/profile/:userId" element={<Profile />} />
-                <Route path="/wallet" element={<Wallet />} />
-                <Route path="/post/:postId" element={<Post />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/leaderboard" element={<Leaderboard />} />
-                <Route path="/admin/migration" element={<AdminMigration />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <LawOfLightGuard>
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/law-of-light" element={<LawOfLight />} />
+                  <Route path="/" element={<Feed />} />
+                  <Route path="/friends" element={<Friends />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/profile/:userId" element={<Profile />} />
+                  <Route path="/wallet" element={<Wallet />} />
+                  <Route path="/post/:postId" element={<Post />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/admin/migration" element={<AdminMigration />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </LawOfLightGuard>
             </Suspense>
           </BrowserRouter>
         </TooltipProvider>
