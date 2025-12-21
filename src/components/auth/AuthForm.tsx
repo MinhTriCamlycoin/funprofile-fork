@@ -8,22 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Eye, EyeOff } from 'lucide-react';
-
-const authSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  username: z.string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(30, 'Username must be less than 30 characters')
-    .refine(
-      val => !['admin', 'administrator', 'system', 'root', 'moderator', 'mod', 'support', 'help'].includes(val.toLowerCase()),
-      { message: 'This username is reserved' }
-    )
-    .optional(),
-});
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export const AuthForm = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,11 +21,25 @@ export const AuthForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
+  const getAuthSchema = () => z.object({
+    email: z.string().email(t('authErrorInvalidEmail')),
+    password: z.string().min(6, t('authErrorPasswordShort')),
+    username: z.string()
+      .min(3, t('authErrorUsernameShort'))
+      .max(30, t('authErrorUsernameLong'))
+      .refine(
+        val => !['admin', 'administrator', 'system', 'root', 'moderator', 'mod', 'support', 'help'].includes(val.toLowerCase()),
+        { message: t('authErrorUsernameReserved') }
+      )
+      .optional(),
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const authSchema = getAuthSchema();
       const validation = authSchema.safeParse({
         email,
         password,
@@ -52,7 +55,7 @@ export const AuthForm = () => {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success('Welcome back!');
+        toast.success(t('welcomeBack'));
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -63,10 +66,10 @@ export const AuthForm = () => {
           },
         });
         if (error) throw error;
-        toast.success('Account created! Please check your email.');
+        toast.success(t('authSuccessSignUp'));
       }
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      toast.error(error.message || t('authErrorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -74,7 +77,7 @@ export const AuthForm = () => {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      toast.error('Please enter your email address');
+      toast.error(t('authErrorInvalidEmail'));
       return;
     }
 
@@ -84,10 +87,10 @@ export const AuthForm = () => {
         redirectTo: `${window.location.origin}/auth`,
       });
       if (error) throw error;
-      toast.success('Password reset email sent! Please check your inbox.');
+      toast.success(t('authSuccessPasswordReset'));
       setShowForgotPassword(false);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send reset email');
+      toast.error(error.message || t('authErrorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -95,7 +98,7 @@ export const AuthForm = () => {
 
   return (
     <div className="w-full max-w-md relative">
-      {/* Outer Gold Metallic Frame - Sci-Fi Shield Shape */}
+      {/* Outer Gold Metallic Frame */}
       <div className="relative p-2 rounded-3xl"
            style={{
              background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 20%, #fcd34d 40%, #d97706 60%, #f59e0b 80%, #fbbf24 100%)',
@@ -104,25 +107,13 @@ export const AuthForm = () => {
         
         {/* Decorative Corner Glow Effects */}
         <div className="absolute top-2 left-2 w-6 h-6 rounded-full" 
-             style={{ 
-               background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)',
-               opacity: 0.6
-             }} />
+             style={{ background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)', opacity: 0.6 }} />
         <div className="absolute top-2 right-2 w-6 h-6 rounded-full" 
-             style={{ 
-               background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)',
-               opacity: 0.6
-             }} />
+             style={{ background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)', opacity: 0.6 }} />
         <div className="absolute bottom-2 left-2 w-6 h-6 rounded-full" 
-             style={{ 
-               background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)',
-               opacity: 0.6
-             }} />
+             style={{ background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)', opacity: 0.6 }} />
         <div className="absolute bottom-2 right-2 w-6 h-6 rounded-full" 
-             style={{ 
-               background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)',
-               opacity: 0.6
-             }} />
+             style={{ background: 'radial-gradient(circle, #fcd34d 0%, transparent 70%)', opacity: 0.6 }} />
 
         {/* Inner Pearl White Background */}
         <Card className="relative border-0 overflow-hidden rounded-2xl"
@@ -146,10 +137,10 @@ export const AuthForm = () => {
           
           <CardHeader className="relative z-10">
             <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
-              {isLogin ? 'Welcome Back' : 'Join FUN Profile'}
+              {isLogin ? t('authWelcomeBack') : t('authCreateAccount')}
             </CardTitle>
             <CardDescription className="text-center text-slate-600">
-              {isLogin ? 'Sign in to your account' : 'Create your account'}
+              {isLogin ? t('authSignInTitle') : t('authJoinUs')}
             </CardDescription>
           </CardHeader>
           
@@ -157,9 +148,10 @@ export const AuthForm = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-slate-700 font-semibold text-sm uppercase tracking-wide">Username</Label>
+                  <Label htmlFor="username" className="text-slate-700 font-semibold text-sm uppercase tracking-wide">
+                    {t('authUsername')}
+                  </Label>
                   <div className="relative group">
-                    {/* Energy Slot Border */}
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-slate-400 via-slate-300 to-slate-400 p-[2px]">
                       <div className="w-full h-full bg-white rounded-xl" />
                     </div>
@@ -169,23 +161,21 @@ export const AuthForm = () => {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       required={!isLogin}
+                      placeholder={t('authUsernamePlaceholder')}
                       className="relative z-10 rounded-xl border-2 border-slate-300 bg-gradient-to-br from-white to-slate-50 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/30 transition-all duration-300"
-                      style={{
-                        boxShadow: 'inset 0 2px 6px rgba(100, 116, 139, 0.15), 0 0 0 rgba(16, 185, 129, 0)',
-                      }}
+                      style={{ boxShadow: 'inset 0 2px 6px rgba(100, 116, 139, 0.15)' }}
                     />
-                    {/* Inner Green Glow on Focus */}
                     <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"
-                         style={{
-                           boxShadow: 'inset 0 0 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.3)'
-                         }} />
+                         style={{ boxShadow: 'inset 0 0 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.3)' }} />
                   </div>
                 </div>
               )}
+              
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 font-semibold text-sm uppercase tracking-wide">Email</Label>
+                <Label htmlFor="email" className="text-slate-700 font-semibold text-sm uppercase tracking-wide">
+                  {t('authEmail')}
+                </Label>
                 <div className="relative group">
-                  {/* Metallic Silver/Grey Border */}
                   <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-slate-400 via-slate-300 to-slate-400 p-[2px]">
                     <div className="w-full h-full bg-white rounded-xl" />
                   </div>
@@ -195,22 +185,20 @@ export const AuthForm = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    placeholder={t('authEmailPlaceholder')}
                     className="relative z-10 rounded-xl border-2 border-slate-300 bg-gradient-to-br from-white to-slate-50 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/30 transition-all duration-300"
-                    style={{
-                      boxShadow: 'inset 0 2px 6px rgba(100, 116, 139, 0.15), 0 0 0 rgba(16, 185, 129, 0)',
-                    }}
+                    style={{ boxShadow: 'inset 0 2px 6px rgba(100, 116, 139, 0.15)' }}
                   />
-                  {/* Inner Green Glow on Focus */}
                   <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"
-                       style={{
-                         boxShadow: 'inset 0 0 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.3)'
-                       }} />
+                       style={{ boxShadow: 'inset 0 0 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.3)' }} />
                 </div>
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-700 font-semibold text-sm uppercase tracking-wide">Password</Label>
+                <Label htmlFor="password" className="text-slate-700 font-semibold text-sm uppercase tracking-wide">
+                  {t('authPassword')}
+                </Label>
                 <div className="relative group">
-                  {/* Metallic Silver/Grey Border */}
                   <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-slate-400 via-slate-300 to-slate-400 p-[2px]">
                     <div className="w-full h-full bg-white rounded-xl" />
                   </div>
@@ -220,10 +208,9 @@ export const AuthForm = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    placeholder={t('authPasswordPlaceholder')}
                     className="relative z-10 rounded-xl pr-10 border-2 border-slate-300 bg-gradient-to-br from-white to-slate-50 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/30 transition-all duration-300"
-                    style={{
-                      boxShadow: 'inset 0 2px 6px rgba(100, 116, 139, 0.15), 0 0 0 rgba(16, 185, 129, 0)',
-                    }}
+                    style={{ boxShadow: 'inset 0 2px 6px rgba(100, 116, 139, 0.15)' }}
                   />
                   <button
                     type="button"
@@ -232,48 +219,33 @@ export const AuthForm = () => {
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
-                  {/* Inner Green Glow on Focus */}
                   <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"
-                       style={{
-                         boxShadow: 'inset 0 0 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.3)'
-                       }} />
+                       style={{ boxShadow: 'inset 0 0 20px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.3)' }} />
                 </div>
               </div>
               
-              {/* Ignition Power Switch Button */}
+              {/* Submit Button */}
               <Button 
                 type="submit" 
                 className="w-full relative overflow-hidden border-0 h-14 text-lg font-bold text-white transition-all duration-300 group mt-6 rounded-2xl" 
                 disabled={loading}
                 style={{
                   background: 'linear-gradient(135deg, #10b981 0%, #059669 20%, #34d399 40%, #10b981 60%, #059669 80%, #047857 100%)',
-                  boxShadow: `
-                    0 0 40px rgba(16, 185, 129, 0.7),
-                    0 0 80px rgba(16, 185, 129, 0.4),
-                    0 4px 20px rgba(0, 0, 0, 0.3),
-                    inset 0 1px 2px rgba(255, 255, 255, 0.4),
-                    inset 0 -2px 4px rgba(0, 0, 0, 0.2)
-                  `
+                  boxShadow: '0 0 40px rgba(16, 185, 129, 0.7), 0 0 80px rgba(16, 185, 129, 0.4), 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2)'
                 }}
               >
-                {/* Animated Glow Layer */}
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-300 via-green-400 to-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"
                      style={{ filter: 'blur(8px)' }} />
-                
-                {/* Energy Pulse Animation */}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                       style={{ 
-                         animation: 'shimmer 2s infinite',
-                         backgroundSize: '200% 100%'
-                       }} />
+                       style={{ animation: 'shimmer 2s infinite', backgroundSize: '200% 100%' }} />
                 </div>
-
                 <span className="relative z-10 flex items-center justify-center gap-3 tracking-wider uppercase">
-                  {loading ? 'Initializing...' : (isLogin ? 'SIGN IN' : 'SIGN UP')}
+                  {loading ? t('authInitializing') : (isLogin ? t('authSignIn') : t('authSignUp'))}
                 </span>
               </Button>
             </form>
+            
             <div className="mt-5 space-y-3">
               {isLogin && (
                 <div className="text-center text-sm">
@@ -282,15 +254,16 @@ export const AuthForm = () => {
                     onClick={() => setShowForgotPassword(!showForgotPassword)}
                     className="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline transition-colors"
                   >
-                    Forgot password?
+                    {t('authForgotPassword')}
                   </button>
                 </div>
               )}
+              
               {showForgotPassword && (
                 <div className="space-y-2">
                   <Input
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder={t('authEmailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="border-2 border-slate-400 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/50"
@@ -300,10 +273,11 @@ export const AuthForm = () => {
                     className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
                     disabled={loading}
                   >
-                    Send Reset Email
+                    {t('authSendResetEmail')}
                   </Button>
                 </div>
               )}
+              
               <div className="text-center text-sm">
                 <button
                   type="button"
@@ -313,31 +287,33 @@ export const AuthForm = () => {
                   }}
                   className="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline transition-colors"
                 >
-                  {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+                  {isLogin ? t('authNoAccount') : t('authHaveAccount')}{' '}
+                  <span className="font-bold">{isLogin ? t('authSignUpLink') : t('authSignInLink')}</span>
                 </button>
               </div>
+              
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-slate-300" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-slate-500 font-semibold">OR</span>
+                  <span className="bg-white px-2 text-slate-500 font-semibold">{t('authOr')}</span>
                 </div>
               </div>
+              
               <Button
                 type="button"
                 variant="outline"
                 className="w-full border-2 border-slate-300 bg-white/60 hover:bg-slate-50 hover:border-emerald-400 text-slate-700 font-semibold transition-all"
                 onClick={() => navigate('/')}
               >
-                Use without account
+                {t('authUseWithoutAccount')}
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
       
-      {/* CSS Animation for shimmer effect */}
       <style>{`
         @keyframes shimmer {
           0% { background-position: -200% 0; }
