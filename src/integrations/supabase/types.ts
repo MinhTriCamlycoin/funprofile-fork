@@ -216,6 +216,8 @@ export type Database = {
           id: string
           is_banned: boolean
           is_restricted: boolean
+          law_of_light_accepted: boolean
+          law_of_light_accepted_at: string | null
           reward_status: string
           updated_at: string
           username: string
@@ -230,6 +232,8 @@ export type Database = {
           id: string
           is_banned?: boolean
           is_restricted?: boolean
+          law_of_light_accepted?: boolean
+          law_of_light_accepted_at?: string | null
           reward_status?: string
           updated_at?: string
           username: string
@@ -244,6 +248,8 @@ export type Database = {
           id?: string
           is_banned?: boolean
           is_restricted?: boolean
+          law_of_light_accepted?: boolean
+          law_of_light_accepted_at?: string | null
           reward_status?: string
           updated_at?: string
           username?: string
