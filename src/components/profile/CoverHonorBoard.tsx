@@ -83,101 +83,6 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
     </div>
   );
 
-  // Compact mobile stats grid component
-  const MobileStats = () => (
-    <div className="md:hidden w-full mt-2">
-      <div className="rounded-xl overflow-hidden border-2 border-yellow-400 bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
-        <div className="p-3">
-          {/* Header - Compact */}
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <img 
-              src="/fun-profile-logo-40.webp" 
-              alt="Fun Profile Web3"
-              className="w-7 h-7 rounded-full border-2 border-green-400/50"
-            />
-            <h2 
-              className="text-lg font-black tracking-wider uppercase"
-              style={{
-                fontFamily: "'Orbitron', 'Rajdhani', sans-serif",
-                background: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #fcd34d 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              HONOR BOARD
-            </h2>
-          </div>
-          
-          {/* Compact 4x2 Grid */}
-          <div className="grid grid-cols-4 gap-1.5 text-center mb-2">
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <ArrowUp className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.posts_count)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">Posts</div>
-            </div>
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <Star className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.reactions_on_posts)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">Reactions</div>
-            </div>
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <MessageCircle className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.comments_count)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">Comments</div>
-            </div>
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <Users className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.friends_count)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">Friends</div>
-            </div>
-          </div>
-          
-          {/* Second row: Shares, NFTs, Claimable, Claimed */}
-          <div className="grid grid-cols-4 gap-1.5 text-center mb-2">
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <Share2 className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.shares_count)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">Shares</div>
-            </div>
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <Image className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.nfts_count)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">NFTs</div>
-            </div>
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <Gift className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.claimable)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">Claimable</div>
-            </div>
-            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
-              <Coins className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
-              <div className="text-white font-bold text-xs">{formatNumber(stats.claimed)}</div>
-              <div className="text-yellow-400/80 text-[8px] uppercase">Claimed</div>
-            </div>
-          </div>
-          
-          {/* Total rows */}
-          <div className="grid grid-cols-2 gap-1.5">
-            <div className="bg-yellow-500/20 rounded-lg py-1.5 px-2 border border-yellow-400/50 flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <BadgeDollarSign className="w-3.5 h-3.5 text-yellow-400" />
-                <span className="text-yellow-400 font-bold text-[9px] uppercase">Reward</span>
-              </div>
-              <span className="text-white font-bold text-xs">{formatNumber(stats.total_reward)}</span>
-            </div>
-            <div className="bg-yellow-500/20 rounded-lg py-1.5 px-2 border border-yellow-400/50 flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <Wallet className="w-3.5 h-3.5 text-yellow-400" />
-                <span className="text-yellow-400 font-bold text-[9px] uppercase">Money</span>
-              </div>
-              <span className="text-white font-bold text-xs">{formatNumber(stats.total_money)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <>
       {/* Desktop: Overlay on cover photo */}
@@ -294,9 +199,147 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
           </div>
         </div>
       </div>
-      
-      {/* Mobile: Rendered separately below the cover photo - export for parent usage */}
-      <MobileStats />
     </>
+  );
+};
+
+// Standalone Mobile Stats component for use in bottom sheet
+interface MobileStatsProps {
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+}
+
+export const MobileStats = ({ userId, username, avatarUrl }: MobileStatsProps) => {
+  const { stats: rewardStats, isLoading: rewardLoading } = useRewardCalculation(userId);
+
+  const { data: additionalData, isLoading: additionalLoading } = useQuery({
+    queryKey: ['profile-additional-stats', userId],
+    queryFn: async () => {
+      const { data: transactionsData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('status', 'success');
+
+      const receivedAmount = transactionsData?.reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0) || 0;
+      return { receivedAmount };
+    },
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const loading = rewardLoading || additionalLoading;
+
+  const stats = {
+    posts_count: rewardStats?.postsCount || 0,
+    comments_count: rewardStats?.commentsOnPosts || 0,
+    reactions_on_posts: rewardStats?.reactionsOnPosts || 0,
+    shares_count: rewardStats?.sharesCount || 0,
+    friends_count: rewardStats?.friendsCount || 0,
+    nfts_count: 0,
+    claimable: rewardStats?.claimableAmount || 0,
+    claimed: rewardStats?.claimedAmount || 0,
+    total_reward: rewardStats?.totalReward || 0,
+    total_money: (rewardStats?.totalReward || 0) + (additionalData?.receivedAmount || 0),
+  };
+
+  const formatNumber = (num: number): string => num.toLocaleString('vi-VN');
+
+  if (loading) {
+    return (
+      <div className="w-full p-4">
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <div className="rounded-xl overflow-hidden border-2 border-yellow-400 bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
+        <div className="p-3">
+          {/* Header with user info */}
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Avatar className="w-8 h-8 border-2 border-yellow-400/70">
+              <AvatarImage src={avatarUrl} />
+              <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-black font-bold text-sm">
+                {username?.[0]?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-white font-bold text-lg uppercase truncate max-w-[150px]">
+              {username || 'USER'}
+            </span>
+          </div>
+          
+          {/* Compact 4x2 Grid */}
+          <div className="grid grid-cols-4 gap-1.5 text-center mb-2">
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <ArrowUp className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.posts_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Posts</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Star className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.reactions_on_posts)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Reactions</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <MessageCircle className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.comments_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Comments</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Users className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.friends_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Friends</div>
+            </div>
+          </div>
+          
+          {/* Second row: Shares, NFTs, Claimable, Claimed */}
+          <div className="grid grid-cols-4 gap-1.5 text-center mb-2">
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Share2 className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.shares_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Shares</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Image className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.nfts_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">NFTs</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Gift className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.claimable)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Claimable</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Coins className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.claimed)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Claimed</div>
+            </div>
+          </div>
+          
+          {/* Total rows */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="bg-yellow-500/20 rounded-lg py-1.5 px-2 border border-yellow-400/50 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <BadgeDollarSign className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="text-yellow-400 font-bold text-[9px] uppercase">Reward</span>
+              </div>
+              <span className="text-white font-bold text-xs">{formatNumber(stats.total_reward)}</span>
+            </div>
+            <div className="bg-yellow-500/20 rounded-lg py-1.5 px-2 border border-yellow-400/50 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Wallet className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="text-yellow-400 font-bold text-[9px] uppercase">Money</span>
+              </div>
+              <span className="text-white font-bold text-xs">{formatNumber(stats.total_money)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
