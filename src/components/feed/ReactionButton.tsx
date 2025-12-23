@@ -105,35 +105,35 @@ export const ReactionButton = ({
     >
       <button
         onClick={() => handleReaction(currentReaction || 'like')}
-        className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg transition-all hover:bg-secondary ${
+        className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-3 min-h-[48px] rounded-lg transition-all hover:bg-secondary active:bg-secondary/80 ${
           currentReaction ? 'text-blue-500' : 'text-muted-foreground'
         } ${isAnimating ? 'scale-110' : ''}`}
       >
         {activeReaction ? (
           <>
-            <span className="text-xl">{activeReaction.icon}</span>
-            <span className="font-semibold text-sm" style={{ color: activeReaction.type === 'like' ? '#3b82f6' : activeReaction.type === 'love' ? '#ef4444' : '#eab308' }}>
+            <span className="text-lg sm:text-xl">{activeReaction.icon}</span>
+            <span className="font-semibold text-xs sm:text-sm" style={{ color: activeReaction.type === 'like' ? '#3b82f6' : activeReaction.type === 'love' ? '#ef4444' : '#eab308' }}>
               {activeReaction.label}
             </span>
           </>
         ) : (
           <>
             <ThumbsUp className="w-5 h-5" />
-            <span className="font-semibold text-sm">Thích</span>
+            <span className="font-semibold text-xs sm:text-sm">Thích</span>
           </>
         )}
       </button>
 
-      {/* Reactions Popup */}
+      {/* Reactions Popup - Larger touch targets on mobile */}
       {showReactions && (
         <>
           {/* Invisible bridge to connect button to popup */}
           <div className="absolute bottom-full left-0 right-0 h-3" />
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-card rounded-full shadow-xl border border-border p-1.5 flex gap-0.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-card rounded-full shadow-xl border border-border p-1 sm:p-1.5 flex gap-0 sm:gap-0.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
             {REACTIONS.map((reaction) => (
               <button
                 key={reaction.type}
-                className="w-10 h-10 flex items-center justify-center text-2xl hover:scale-150 transition-transform duration-200 hover:-translate-y-1"
+                className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center text-2xl hover:scale-125 sm:hover:scale-150 transition-transform duration-200 hover:-translate-y-1 active:scale-110"
                 onClick={() => handleReaction(reaction.type)}
                 title={reaction.label}
               >

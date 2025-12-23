@@ -29,25 +29,25 @@ export const MobileBottomNav = memo(() => {
 
   return (
     <>
-      {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card/98 backdrop-blur-lg border-t border-border/50 bottom-nav-safe">
-        <div className="flex items-center justify-around h-16 px-1 max-w-lg mx-auto">
+      {/* Bottom Navigation Bar - Fixed with larger touch targets */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card/98 backdrop-blur-lg border-t border-border/50 safe-area-bottom">
+        <div className="flex items-center justify-around h-[68px] px-1 max-w-lg mx-auto">
           {navItems.map((item, index) => (
             <button
               key={index}
               onClick={item.action}
               aria-label={item.label}
-              className={`flex flex-col items-center justify-center min-w-[60px] min-h-[52px] rounded-2xl transition-all duration-200 touch-ripple ${
+              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[56px] rounded-2xl transition-all duration-200 touch-manipulation ${
                 item.isFab
-                  ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground -mt-5 w-14 h-14 rounded-full shadow-lg shadow-primary/40 active:scale-95'
+                  ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground -mt-6 w-14 h-14 rounded-full shadow-lg shadow-primary/40 active:scale-95'
                   : item.path && isActive(item.path)
                   ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground active:text-primary active:bg-primary/5'
               }`}
             >
-              <item.icon className={`${item.isFab ? 'w-6 h-6' : 'w-5 h-5'} transition-transform`} strokeWidth={item.isFab ? 2.5 : 2} />
+              <item.icon className={`${item.isFab ? 'w-6 h-6' : 'w-6 h-6'} transition-transform`} strokeWidth={item.isFab ? 2.5 : 1.8} />
               {!item.isFab && (
-                <span className="text-[10px] mt-0.5 font-medium truncate max-w-[48px]">{item.label}</span>
+                <span className="text-[11px] mt-1 font-medium truncate max-w-[56px]">{item.label}</span>
               )}
             </button>
           ))}
