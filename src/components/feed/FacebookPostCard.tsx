@@ -218,7 +218,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
 
   return (
     <>
-      <div className="fb-card mb-4 overflow-hidden">
+      <div className="fb-card mb-3 sm:mb-4 overflow-hidden mx-0">
         {/* Post Header */}
         <div className="flex items-start justify-between p-4">
           <div className="flex items-center gap-3">
@@ -309,8 +309,8 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
           onCommentClick={() => setShowComments(!showComments)}
         />
 
-        {/* Action Buttons */}
-        <div className="border-t border-border mx-4">
+        {/* Action Buttons - Larger touch targets on mobile */}
+        <div className="border-t border-border mx-2 sm:mx-4">
           <div className="flex items-center py-1">
             <ReactionButton
               postId={post.id}
@@ -322,24 +322,24 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
 
             <button
               onClick={() => setShowComments(!showComments)}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors hover:bg-secondary text-muted-foreground"
+              className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 min-h-[48px] rounded-lg transition-colors hover:bg-secondary text-muted-foreground active:bg-secondary/80"
             >
-              <MessageCircle className="w-5 h-5" />
-              <span className="font-semibold text-sm">Bình luận</span>
+              <MessageCircle className="w-5 h-5 sm:w-5 sm:h-5" />
+              <span className="font-semibold text-xs sm:text-sm">Bình luận</span>
             </button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors hover:bg-secondary text-muted-foreground">
-                  <Share2 className="w-5 h-5" />
-                  <span className="font-semibold text-sm">Chia sẻ</span>
+                <button className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 min-h-[48px] rounded-lg transition-colors hover:bg-secondary text-muted-foreground active:bg-secondary/80">
+                  <Share2 className="w-5 h-5 sm:w-5 sm:h-5" />
+                  <span className="font-semibold text-xs sm:text-sm">Chia sẻ</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center">
-                <DropdownMenuItem onClick={handleShareToProfile} className="cursor-pointer">
+                <DropdownMenuItem onClick={handleShareToProfile} className="cursor-pointer min-h-[44px]">
                   Chia sẻ lên trang cá nhân
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+                <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer min-h-[44px]">
                   Sao chép liên kết
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -57,141 +57,246 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
 
   if (loading) {
     return (
-      <div className="absolute right-3 sm:right-4 top-3 sm:top-4 bottom-3 sm:bottom-4 w-[50%] max-w-[500px]">
-        <Skeleton className="h-full w-full rounded-2xl" />
-      </div>
+      <>
+        {/* Desktop: on cover photo */}
+        <div className="hidden md:block absolute right-3 sm:right-4 top-3 sm:top-4 bottom-3 sm:bottom-4 w-[50%] max-w-[500px]">
+          <Skeleton className="h-full w-full rounded-2xl" />
+        </div>
+        {/* Mobile: placeholder below cover - rendered in parent */}
+      </>
     );
   }
 
   const StatRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
-    <div className="flex items-center justify-between py-1 px-2.5 rounded-lg border border-yellow-500/40 bg-green-800/90 backdrop-blur-sm">
-      <div className="flex items-center gap-1.5">
+    <div className="flex items-center justify-between py-1 px-2 sm:px-2.5 rounded-lg border border-yellow-500/40 bg-green-800/90 backdrop-blur-sm">
+      <div className="flex items-center gap-1 sm:gap-1.5">
         <div className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]">
           {icon}
         </div>
-        <span className="text-yellow-400 font-bold text-[10px] sm:text-xs uppercase tracking-wide drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+        <span className="text-yellow-400 font-bold text-[9px] sm:text-[10px] md:text-xs uppercase tracking-wide drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]">
           {label}
         </span>
       </div>
-      <span className="text-white font-bold text-xs sm:text-sm drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]">
+      <span className="text-white font-bold text-[11px] sm:text-xs md:text-sm drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]">
         {formatNumber(value)}
       </span>
     </div>
   );
 
-  return (
-    <div className="absolute right-3 sm:right-4 top-3 sm:top-4 bottom-3 sm:bottom-4 w-[50%] max-w-[500px] min-w-[300px]">
-      {/* Main Container - Fill height to match cover photo bounds */}
-      <div className="h-full rounded-2xl overflow-hidden border-2 border-yellow-400 flex flex-col">
-        <div className="relative flex-1 flex flex-col p-3 sm:p-4">
-          {/* Header - Logo and Title on same line */}
-          <div className="text-center mb-3">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              {/* Logo */}
-              <img 
-                src="/fun-profile-logo-40.webp" 
-                alt="Fun Profile Web3"
-                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-green-400/50 shadow-[0_0_20px_rgba(34,197,94,0.6)]"
-              />
-              {/* Title - HONOR BOARD - same height as logo */}
-              <h1 
-                className="text-2xl sm:text-3xl font-black tracking-wider uppercase leading-none"
-                style={{
-                  fontFamily: "'Orbitron', 'Rajdhani', sans-serif",
-                  background: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #fcd34d 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  WebkitTextStroke: '2px white',
-                  textShadow: '0 0 30px rgba(250,204,21,0.8), 0 0 60px rgba(250,204,21,0.4)',
-                  filter: 'drop-shadow(0 0 10px rgba(250,204,21,0.6))',
-                }}
-              >
-                HONOR BOARD
-              </h1>
+  // Compact mobile stats grid component
+  const MobileStats = () => (
+    <div className="md:hidden w-full mt-2">
+      <div className="rounded-xl overflow-hidden border-2 border-yellow-400 bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
+        <div className="p-3">
+          {/* Header - Compact */}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <img 
+              src="/fun-profile-logo-40.webp" 
+              alt="Fun Profile Web3"
+              className="w-7 h-7 rounded-full border-2 border-green-400/50"
+            />
+            <h2 
+              className="text-lg font-black tracking-wider uppercase"
+              style={{
+                fontFamily: "'Orbitron', 'Rajdhani', sans-serif",
+                background: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #fcd34d 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              HONOR BOARD
+            </h2>
+          </div>
+          
+          {/* Compact 4x2 Grid */}
+          <div className="grid grid-cols-4 gap-1.5 text-center mb-2">
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <ArrowUp className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.posts_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Posts</div>
             </div>
-            
-            {/* User info - Avatar on left, Name on right */}
-            <div className="flex items-center justify-center gap-2">
-              <Avatar className="w-8 h-8 border-2 border-yellow-400/70 shadow-[0_0_10px_rgba(250,204,21,0.4)]">
-                <AvatarImage src={avatarUrl} />
-                <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-black font-bold text-sm">
-                  {username?.[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <span 
-                className="text-white font-bold truncate max-w-[150px] drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] text-lg sm:text-xl"
-              >
-                {username?.toUpperCase() || 'USER'}
-              </span>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Star className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.reactions_on_posts)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Reactions</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <MessageCircle className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.comments_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Comments</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Users className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.friends_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Friends</div>
             </div>
           </div>
-
-          {/* Two Column Layout - Even vertical spacing */}
-          <div className="flex-1 grid grid-cols-2 gap-2">
-            {/* Left Column - Posts, Reactions, Comments, Shares */}
-            <div className="flex flex-col justify-between space-y-2">
-              <StatRow 
-                icon={<ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Posts"
-                value={stats.posts_count}
-              />
-              <StatRow 
-                icon={<Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Reactions"
-                value={stats.reactions_on_posts}
-              />
-              <StatRow 
-                icon={<MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Comments"
-                value={stats.comments_count}
-              />
-              <StatRow 
-                icon={<Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Shares"
-                value={stats.shares_count}
-              />
+          
+          {/* Second row: Shares, NFTs, Claimable, Claimed */}
+          <div className="grid grid-cols-4 gap-1.5 text-center mb-2">
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Share2 className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.shares_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Shares</div>
             </div>
-
-            {/* Right Column - Friends, NFTs, Claimable, Claimed */}
-            <div className="flex flex-col justify-between space-y-2">
-              <StatRow 
-                icon={<Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Friends"
-                value={stats.friends_count}
-              />
-              <StatRow 
-                icon={<Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="NFTs"
-                value={stats.nfts_count}
-              />
-              <StatRow 
-                icon={<Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Claimable"
-                value={stats.claimable}
-              />
-              <StatRow 
-                icon={<Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                label="Claimed"
-                value={stats.claimed}
-              />
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Image className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.nfts_count)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">NFTs</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Gift className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.claimable)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Claimable</div>
+            </div>
+            <div className="bg-green-800/70 rounded-lg py-1.5 px-1 border border-yellow-500/30">
+              <Coins className="w-3.5 h-3.5 mx-auto text-yellow-400 mb-0.5" />
+              <div className="text-white font-bold text-xs">{formatNumber(stats.claimed)}</div>
+              <div className="text-yellow-400/80 text-[8px] uppercase">Claimed</div>
             </div>
           </div>
-
-          {/* Full Width Total Rows - Even spacing with columns */}
-          <div className="mt-3 space-y-2">
-            <StatRow 
-              icon={<BadgeDollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              label="Total Reward"
-              value={stats.total_reward}
-            />
-            <StatRow 
-              icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              label="Total Money"
-              value={stats.total_money}
-            />
+          
+          {/* Total rows */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="bg-yellow-500/20 rounded-lg py-1.5 px-2 border border-yellow-400/50 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <BadgeDollarSign className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="text-yellow-400 font-bold text-[9px] uppercase">Reward</span>
+              </div>
+              <span className="text-white font-bold text-xs">{formatNumber(stats.total_reward)}</span>
+            </div>
+            <div className="bg-yellow-500/20 rounded-lg py-1.5 px-2 border border-yellow-400/50 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Wallet className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="text-yellow-400 font-bold text-[9px] uppercase">Money</span>
+              </div>
+              <span className="text-white font-bold text-xs">{formatNumber(stats.total_money)}</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop: Overlay on cover photo */}
+      <div className="hidden md:block absolute right-3 sm:right-4 top-3 sm:top-4 bottom-3 sm:bottom-4 w-[50%] max-w-[500px] min-w-[300px]">
+        {/* Main Container - Fill height to match cover photo bounds */}
+        <div className="h-full rounded-2xl overflow-hidden border-2 border-yellow-400 flex flex-col bg-gradient-to-br from-green-900 via-green-800 to-emerald-900">
+          <div className="relative flex-1 flex flex-col p-3 sm:p-4">
+            {/* Header - Logo and Title on same line */}
+            <div className="text-center mb-3">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                {/* Logo */}
+                <img 
+                  src="/fun-profile-logo-40.webp" 
+                  alt="Fun Profile Web3"
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-green-400/50 shadow-[0_0_20px_rgba(34,197,94,0.6)]"
+                />
+                {/* Title - HONOR BOARD - same height as logo */}
+                <h1 
+                  className="text-2xl sm:text-3xl font-black tracking-wider uppercase leading-none"
+                  style={{
+                    fontFamily: "'Orbitron', 'Rajdhani', sans-serif",
+                    background: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #fcd34d 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    WebkitTextStroke: '2px white',
+                    textShadow: '0 0 30px rgba(250,204,21,0.8), 0 0 60px rgba(250,204,21,0.4)',
+                    filter: 'drop-shadow(0 0 10px rgba(250,204,21,0.6))',
+                  }}
+                >
+                  HONOR BOARD
+                </h1>
+              </div>
+              
+              {/* User info - Avatar on left, Name on right */}
+              <div className="flex items-center justify-center gap-2">
+                <Avatar className="w-8 h-8 border-2 border-yellow-400/70 shadow-[0_0_10px_rgba(250,204,21,0.4)]">
+                  <AvatarImage src={avatarUrl} />
+                  <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-black font-bold text-sm">
+                    {username?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <span 
+                  className="text-white font-bold truncate max-w-[150px] drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] text-lg sm:text-xl"
+                >
+                  {username?.toUpperCase() || 'USER'}
+                </span>
+              </div>
+            </div>
+
+            {/* Two Column Layout - Even vertical spacing */}
+            <div className="flex-1 grid grid-cols-2 gap-2">
+              {/* Left Column - Posts, Reactions, Comments, Shares */}
+              <div className="flex flex-col justify-between space-y-2">
+                <StatRow 
+                  icon={<ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="Posts"
+                  value={stats.posts_count}
+                />
+                <StatRow 
+                  icon={<Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="Reactions"
+                  value={stats.reactions_on_posts}
+                />
+                <StatRow 
+                  icon={<MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="Comments"
+                  value={stats.comments_count}
+                />
+                <StatRow 
+                  icon={<Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="Shares"
+                  value={stats.shares_count}
+                />
+              </div>
+
+              {/* Right Column - Friends, NFTs, Claimable, Claimed */}
+              <div className="flex flex-col justify-between space-y-2">
+                <StatRow 
+                  icon={<Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="Friends"
+                  value={stats.friends_count}
+                />
+                <StatRow 
+                  icon={<Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="NFTs"
+                  value={stats.nfts_count}
+                />
+                <StatRow 
+                  icon={<Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="Claimable"
+                  value={stats.claimable}
+                />
+                <StatRow 
+                  icon={<Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  label="Claimed"
+                  value={stats.claimed}
+                />
+              </div>
+            </div>
+
+            {/* Full Width Total Rows - Even spacing with columns */}
+            <div className="mt-3 space-y-2">
+              <StatRow 
+                icon={<BadgeDollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label="Total Reward"
+                value={stats.total_reward}
+              />
+              <StatRow 
+                icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label="Total Money"
+                value={stats.total_money}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Mobile: Rendered separately below the cover photo - export for parent usage */}
+      <MobileStats />
+    </>
   );
 };

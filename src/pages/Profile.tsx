@@ -183,11 +183,11 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
       <FacebookNavbar />
-      <main className="pt-14">
+      <main className="pt-14 pb-20 lg:pb-4">
         {/* Cover Photo Section - Full Width */}
         <div className="relative">
-          {/* Cover Photo Container */}
-          <div className="h-[250px] sm:h-[320px] md:h-[380px] relative overflow-hidden">
+          {/* Cover Photo Container - Smaller on mobile to make room for honor board */}
+          <div className="h-[180px] sm:h-[280px] md:h-[380px] relative overflow-hidden">
             {profile?.cover_url ? (
               <LazyImage 
                 src={profile.cover_url} 
@@ -199,12 +199,12 @@ const Profile = () => {
               <div className="w-full h-full bg-gradient-to-r from-primary/40 via-gold/30 to-primary/40" />
             )}
             
-            {/* Inner Gradient Overlay for Soft Edges */}
-            <div className="absolute inset-0 pointer-events-none">
+            {/* Inner Gradient Overlay for Soft Edges - Hide on mobile */}
+            <div className="absolute inset-0 pointer-events-none hidden md:block">
               <div className="absolute inset-y-0 left-0 w-32 md:w-48 bg-gradient-to-r from-[#f0f2f5] via-[#f0f2f5]/60 to-transparent" />
             </div>
 
-            {/* Honor Board on Cover Photo */}
+            {/* Honor Board on Cover Photo - Desktop only (hidden on mobile via component) */}
             <CoverHonorBoard 
               userId={profile.id}
               username={profile?.full_name || profile?.username}
@@ -214,7 +214,7 @@ const Profile = () => {
           
           {/* Edit Cover Button - Outside overflow container for proper z-index */}
           {isOwnProfile && (
-            <div className="absolute bottom-4 left-4 z-[100]">
+            <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 z-[100]">
               <CoverPhotoEditor 
                 userId={currentUserId}
                 currentCoverUrl={profile?.cover_url}
@@ -226,8 +226,8 @@ const Profile = () => {
 
         {/* Profile Info Section */}
         <div className="bg-white border-b shadow-sm">
-          <div className="max-w-5xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center md:items-end gap-4 pb-4 -mt-8 md:-mt-16 relative">
+          <div className="max-w-5xl mx-auto px-2 sm:px-4">
+            <div className="flex flex-col md:flex-row items-center md:items-end gap-3 md:gap-4 pb-3 md:pb-4 -mt-12 sm:-mt-8 md:-mt-16 relative">
               {/* Avatar */}
               {isOwnProfile ? (
                 <AvatarEditor
@@ -238,9 +238,9 @@ const Profile = () => {
                   size="large"
                 />
               ) : (
-                <Avatar className="w-32 h-32 md:w-44 md:h-44 border-4 border-white shadow-lg">
+                <Avatar className="w-24 h-24 sm:w-32 sm:h-32 md:w-44 md:h-44 border-4 border-white shadow-lg">
                   {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                  <AvatarFallback className="text-4xl md:text-5xl bg-primary text-white">
+                  <AvatarFallback className="text-3xl sm:text-4xl md:text-5xl bg-primary text-white">
                     {profile?.username?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
@@ -248,35 +248,37 @@ const Profile = () => {
 
               {/* Name and Stats */}
               <div className="flex-1 text-center md:text-left md:pb-4">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                   {profile?.full_name || profile?.username}
                 </h1>
-                <p className="text-muted-foreground">{friendsCount} bạn bè</p>
-                {/* Friend Avatars */}
-                <div className="flex justify-center md:justify-start -space-x-2 mt-2">
+                <p className="text-sm sm:text-base text-muted-foreground">{friendsCount} bạn bè</p>
+                {/* Friend Avatars - Hide on very small screens */}
+                <div className="hidden sm:flex justify-center md:justify-start -space-x-2 mt-2">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="w-8 h-8 rounded-full bg-gray-300 border-2 border-white" />
+                    <div key={i} className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gray-300 border-2 border-white" />
                   ))}
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 pb-4">
+              {/* Action Buttons - Stack on mobile */}
+              <div className="flex flex-wrap justify-center gap-2 pb-2 md:pb-4 w-full md:w-auto">
                 {isOwnProfile ? (
                   <>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Thêm vào tin
+                    <Button size="sm" className="bg-primary hover:bg-primary/90 text-xs sm:text-sm min-h-[44px] px-3 sm:px-4">
+                      <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                      <span className="hidden xs:inline">Thêm vào tin</span>
+                      <span className="xs:hidden">Thêm tin</span>
                     </Button>
-                    <Button variant="secondary">
-                      <PenSquare className="w-4 h-4 mr-2" />
-                      Chỉnh sửa trang cá nhân
+                    <Button size="sm" variant="secondary" className="text-xs sm:text-sm min-h-[44px] px-3 sm:px-4">
+                      <PenSquare className="w-4 h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Chỉnh sửa trang cá nhân</span>
+                      <span className="sm:hidden">Sửa hồ sơ</span>
                     </Button>
                   </>
                 ) : (
                   <>
                     <FriendRequestButton userId={profile.id} currentUserId={currentUserId} />
-                    <Button variant="secondary">
+                    <Button size="sm" variant="secondary" className="min-h-[44px] min-w-[44px]">
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </>
@@ -284,44 +286,44 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Navigation Tabs */}
-            <div className="border-t">
+            {/* Navigation Tabs - Horizontal scroll on mobile */}
+            <div className="border-t -mx-2 sm:mx-0">
               <Tabs defaultValue="posts" className="w-full">
-                <TabsList className="h-auto bg-transparent p-0 border-0 justify-start gap-0">
+                <TabsList className="h-auto bg-transparent p-0 border-0 justify-start gap-0 flex overflow-x-auto scrollbar-hide">
                   <TabsTrigger 
                     value="posts" 
-                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                    className="px-3 sm:px-4 py-3 sm:py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0"
                   >
                     Bài viết
                   </TabsTrigger>
                   <TabsTrigger 
                     value="about" 
-                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                    className="px-3 sm:px-4 py-3 sm:py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0"
                   >
                     Giới thiệu
                   </TabsTrigger>
                   <TabsTrigger 
                     value="friends" 
-                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                    className="px-3 sm:px-4 py-3 sm:py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0"
                   >
                     Bạn bè
                   </TabsTrigger>
                   <TabsTrigger 
                     value="photos" 
-                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                    className="px-3 sm:px-4 py-3 sm:py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0"
                   >
                     Ảnh
                   </TabsTrigger>
                   <TabsTrigger 
                     value="videos" 
-                    className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                    className="px-3 sm:px-4 py-3 sm:py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0"
                   >
                     Video
                   </TabsTrigger>
                   {isOwnProfile && (
                     <TabsTrigger 
                       value="edit" 
-                      className="px-4 py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold"
+                      className="px-3 sm:px-4 py-3 sm:py-4 rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-semibold text-sm sm:text-base whitespace-nowrap flex-shrink-0"
                     >
                       Chỉnh sửa
                     </TabsTrigger>
