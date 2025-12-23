@@ -86,8 +86,7 @@ export const MobileBottomNav = memo(() => {
       <Drawer open={honorBoardOpen} onOpenChange={setHonorBoardOpen}>
         <DrawerContent className="max-h-[85vh] bg-background/80 backdrop-blur-xl border-t-2 border-amber-500/30">
           <DrawerHeader className="text-center pb-2">
-            <div className="mx-auto w-12 h-1.5 bg-muted rounded-full mb-4" />
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2 mt-2">
               <Award className="w-6 h-6 text-amber-500" />
               <DrawerTitle className="text-xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
                 {t('honorBoard')}
