@@ -1,18 +1,54 @@
 import { useState, memo, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Home, Menu, Users, Award, Star } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { FacebookLeftSidebar } from '@/components/feed/FacebookLeftSidebar';
 import { FacebookRightSidebar } from '@/components/feed/FacebookRightSidebar';
+import { MobileStats } from '@/components/profile/CoverHonorBoard';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 export const MobileBottomNav = memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { userId } = useParams<{ userId: string }>();
   const { t } = useLanguage();
   const [leftSheetOpen, setLeftSheetOpen] = useState(false);
   const [honorBoardOpen, setHonorBoardOpen] = useState(false);
+
+  // Detect if we're on a profile page
+  const isProfilePage = location.pathname.startsWith('/profile');
+
+  // Fetch current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user-nav'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Get the profile user ID (from URL params or current user)
+  const profileUserId = userId || currentUser?.id;
+
+  // Fetch profile data for honor board
+  const { data: profileData } = useQuery({
+    queryKey: ['profile-nav', profileUserId],
+    queryFn: async () => {
+      if (!profileUserId) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', profileUserId)
+        .single();
+      return data;
+    },
+    enabled: !!profileUserId && isProfilePage,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
 
@@ -82,20 +118,30 @@ export const MobileBottomNav = memo(() => {
         </SheetContent>
       </Sheet>
 
-      {/* Honor Board Bottom Drawer - Glassmorphism Style */}
+      {/* Honor Board Bottom Drawer - Shows Profile Honor Board on Profile page, Top Ranking on Feed */}
       <Drawer open={honorBoardOpen} onOpenChange={setHonorBoardOpen}>
         <DrawerContent className="max-h-[85vh] bg-background/80 backdrop-blur-xl border-t-2 border-amber-500/30">
           <DrawerHeader className="text-center pb-2">
             <div className="flex items-center justify-center gap-2 mt-2">
               <Award className="w-6 h-6 text-amber-500" />
               <DrawerTitle className="text-xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                {t('honorBoard')}
+                {isProfilePage ? '✨ HONOR BOARD ✨' : t('honorBoard')}
               </DrawerTitle>
               <Award className="w-6 h-6 text-amber-500" />
             </div>
           </DrawerHeader>
           <div className="px-4 pb-8 overflow-y-auto max-h-[70vh]">
-            <FacebookRightSidebar />
+            {isProfilePage && profileUserId ? (
+              // Profile Page: Show individual user's honor board stats
+              <MobileStats 
+                userId={profileUserId} 
+                username={profileData?.username || ''} 
+                avatarUrl={profileData?.avatar_url || undefined}
+              />
+            ) : (
+              // Feed/Other Pages: Show top ranking leaderboard
+              <FacebookRightSidebar />
+            )}
           </div>
         </DrawerContent>
       </Drawer>
