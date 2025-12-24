@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { NotificationDropdown } from './NotificationDropdown';
 import { InlineSearch } from './InlineSearch';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useIsMobileOrTablet } from '@/hooks/use-mobile';
@@ -189,9 +188,6 @@ export const FacebookNavbar = () => {
           <button className="fb-icon-btn" aria-label="Messenger">
             <MessageCircle className="w-5 h-5" />
           </button>
-
-          {/* Notifications */}
-          <NotificationDropdown />
 
           {/* Sign In Button - Only show when not logged in */}
           {!isLoggedIn && (
