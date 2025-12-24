@@ -3,20 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/i18n/LanguageContext';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 import {
-  Users,
   UsersRound,
-  Store,
-  PlaySquare,
-  Clock,
-  Bookmark,
-  CalendarDays,
-  ChevronDown,
-  Gamepad2,
-  Heart,
   Flag,
-  Wallet,
   Sparkles,
+  LogOut,
+  Globe,
 } from 'lucide-react';
 import funEcosystemLogo from '@/assets/fun-ecosystem-logo.webp';
 import funFarmLogo from '@/assets/fun-farm-logo.webp';
@@ -36,12 +29,13 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [showMore, setShowMore] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        setIsLoggedIn(true);
         const { data } = await supabase
           .from('profiles')
           .select('id, username, avatar_url, full_name')
@@ -51,26 +45,31 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
       }
     };
     fetchProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsLoggedIn(!!session);
+      if (!session) {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const menuItems = [
-    { icon: Users, label: t('friends'), path: '/friends', color: 'text-blue-500' },
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+    onItemClick?.();
+  };
+
+  // Shortcuts for "Lối tắt của bạn" section
+  const shortcutItems = [
     { icon: UsersRound, label: t('groups'), path: '/groups', color: 'text-blue-500' },
-    { icon: Store, label: 'Marketplace', path: '/marketplace', color: 'text-blue-500' },
-    { icon: PlaySquare, label: 'Watch', path: '/watch', color: 'text-blue-500' },
-    { icon: Clock, label: t('memories'), path: '/memories', color: 'text-blue-500' },
-    { icon: Bookmark, label: t('saved'), path: '/saved', color: 'text-purple-500' },
+    { icon: Flag, label: t('pages') || 'Trang', path: '/pages', color: 'text-orange-500' },
   ];
 
-  const moreItems = [
-    { icon: CalendarDays, label: t('events'), path: '/events', color: 'text-red-500' },
-    { icon: Gamepad2, label: 'Gaming', path: '/gaming', color: 'text-blue-500' },
-    { icon: Heart, label: 'Fundraisers', path: '/fundraisers', color: 'text-pink-500' },
-    { icon: Flag, label: 'Pages', path: '/pages', color: 'text-orange-500' },
-    { icon: Wallet, label: t('wallet'), path: '/wallet', color: 'text-gold' },
-  ];
-
-  const shortcuts = [
+  // FUN Ecosystem shortcuts
+  const ecosystemShortcuts = [
     { 
       name: 'Law of Light', 
       avatar: '/fun-profile-logo-40.webp',
@@ -123,7 +122,7 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
           </h3>
         </div>
         <div className="space-y-1">
-          {shortcuts.map((shortcut) => (
+          {ecosystemShortcuts.map((shortcut) => (
             <button
               key={shortcut.name}
               onClick={() => {
@@ -170,7 +169,7 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
         </div>
       </div>
 
-      {/* Card 2: Your Shortcuts */}
+      {/* Card 2: Your Shortcuts - Avatar + Name, Groups, Pages */}
       <div className="bg-card rounded-xl border-2 border-yellow-400/50 p-4 hover:border-yellow-400 hover:shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all duration-300">
         <h3 className="font-bold text-sm mb-3 text-muted-foreground">
           {t('yourShortcuts')}
@@ -182,7 +181,7 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
               onClick={() => { navigate(`/profile/${profile.id}`); onItemClick?.(); }}
               className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors"
             >
-              <Avatar className="w-9 h-9">
+              <Avatar className="w-9 h-9 ring-2 ring-yellow-400/50">
                 <AvatarImage src={profile.avatar_url || ''} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   {profile.username?.[0]?.toUpperCase()}
@@ -192,8 +191,8 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
             </button>
           )}
 
-          {/* Menu Items */}
-          {menuItems.map((item) => (
+          {/* Shortcut Items - Groups, Pages */}
+          {shortcutItems.map((item) => (
             <button
               key={item.label}
               onClick={() => { navigate(item.path); onItemClick?.(); }}
@@ -205,31 +204,37 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
               <span className="font-medium text-sm">{item.label}</span>
             </button>
           ))}
+        </div>
+      </div>
 
-          {/* More Items */}
-          {showMore && moreItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => { navigate(item.path); onItemClick?.(); }}
-              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors"
-            >
-              <div className={`w-9 h-9 rounded-full bg-secondary flex items-center justify-center ${item.color}`}>
-                <item.icon className="w-5 h-5" />
-              </div>
-              <span className="font-medium text-sm">{item.label}</span>
-            </button>
-          ))}
-
-          {/* See More Button */}
-          <button
-            onClick={() => setShowMore(!showMore)}
-            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors"
-          >
-            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
-              <ChevronDown className={`w-5 h-5 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+      {/* Card 3: Menu - Language Switcher & Logout */}
+      <div className="bg-card rounded-xl border-2 border-yellow-400/50 p-4 hover:border-yellow-400 hover:shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all duration-300">
+        <h3 className="font-bold text-sm mb-3 text-muted-foreground">
+          Menu
+        </h3>
+        <div className="space-y-1">
+          {/* Language Switcher */}
+          <div className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors">
+            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-blue-500">
+              <Globe className="w-5 h-5" />
             </div>
-            <span className="font-medium text-sm">{showMore ? t('seeLess') : t('seeMore')}</span>
-          </button>
+            <div className="flex-1">
+              <LanguageSwitcher variant="full" />
+            </div>
+          </div>
+
+          {/* Logout Button */}
+          {isLoggedIn && (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-destructive/10 transition-colors text-destructive"
+            >
+              <div className="w-9 h-9 rounded-full bg-destructive/10 flex items-center justify-center">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <span className="font-medium text-sm">{t('signOut')}</span>
+            </button>
+          )}
         </div>
 
         {/* Footer */}
