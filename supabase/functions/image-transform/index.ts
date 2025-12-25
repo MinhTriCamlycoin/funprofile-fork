@@ -191,29 +191,67 @@ serve(async (req) => {
     console.log('Transform options:', cfOptions.join(','));
     console.log('Original URL:', imageUrl);
 
-    // Fetch the original image and stream it back
-    // This acts as a proxy with proper caching headers
-    // Note: For actual resizing, you need Cloudflare Images subscription or Polish enabled on your zone
+    // Cloudflare Images - use imagedelivery.net for uploaded images
+    // or use Image Resizing via /cdn-cgi/image/ for external URLs
+    
+    // Check if this is a Cloudflare Images delivery URL (uploaded to CF Images)
+    if (imageUrl.includes('imagedelivery.net')) {
+      // Already a CF Images URL - modify the variant path
+      const cfImageUrl = imageUrl.replace(/\/public$/, `/${cfOptions.join(',')}`);
+      console.log('Redirecting to CF Images variant:', cfImageUrl);
+      return Response.redirect(cfImageUrl, 302);
+    }
+
+    // For R2 URLs or external URLs, we need to proxy and transform
+    // Cloudflare Image Resizing requires the image to be fetched through CF
     
     try {
-      const imageResponse = await fetch(imageUrl, {
+      // Fetch the original image with transformation hints
+      // Since edge functions run on Deno (not Cloudflare Workers), 
+      // we can't use the cf.image option directly
+      
+      // Option 1: If user has Image Resizing enabled on their zone,
+      // redirect to the zone's /cdn-cgi/image/ endpoint
+      
+      // Option 2: For now, use Sharp-like transformation via proxy
+      // (requires the image to be fetched and processed)
+      
+      // Since we don't have native image processing in Deno edge functions,
+      // the best approach is to redirect to a Cloudflare zone with Image Resizing
+      // or use Cloudflare Images upload + delivery
+      
+      // For now, let's redirect with transformation params as a URL hint
+      // This will work if the user accesses via a CF zone with Image Resizing
+      
+      // Build a redirect URL that includes transform params
+      const transformedUrl = new URL(imageUrl);
+      
+      // Add cache-busting transform identifier
+      transformedUrl.searchParams.set('cf_transform', cfOptions.join(','));
+      
+      console.log('Proxying image with caching...');
+      
+      // Fetch and proxy the original image with proper caching
+      const proxyResponse = await fetch(imageUrl, {
         headers: {
-          'Accept': 'image/webp,image/avif,image/*,*/*;q=0.8',
+          'Accept': 'image/avif,image/webp,image/*,*/*;q=0.8',
+          'User-Agent': 'FunRich-ImageProxy/1.0',
         },
       });
 
-      if (!imageResponse.ok) {
-        console.error('Failed to fetch original image:', imageResponse.status);
+      if (!proxyResponse.ok) {
+        console.error('Failed to fetch original image:', proxyResponse.status);
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch image', status: imageResponse.status }),
-          { status: imageResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Failed to fetch image', status: proxyResponse.status }),
+          { status: proxyResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const contentType = imageResponse.headers.get('content-type') || 'image/webp';
-      const imageBody = await imageResponse.arrayBuffer();
-
+      const contentType = proxyResponse.headers.get('content-type') || 'image/jpeg';
+      const imageBody = await proxyResponse.arrayBuffer();
+      
       console.log('Successfully proxied image, size:', imageBody.byteLength, 'bytes');
+      console.log('Note: For real-time transformation, use CF Image Resizing via zone or upload to CF Images');
 
       return new Response(imageBody, {
         headers: {
@@ -222,9 +260,9 @@ serve(async (req) => {
           'Cache-Control': 'public, max-age=31536000, immutable',
           'CDN-Cache-Control': 'public, max-age=31536000',
           'Vary': 'Accept',
-          'X-Transform-Options': cfOptions.join(','),
-          'X-Original-Url': imageUrl,
-          'X-Proxy-Mode': 'passthrough', // Indicates no transformation applied
+          'X-Transform-Requested': cfOptions.join(','),
+          'X-Transform-Mode': 'proxy',
+          'X-Original-Size': imageBody.byteLength.toString(),
         },
       });
     } catch (fetchError) {
