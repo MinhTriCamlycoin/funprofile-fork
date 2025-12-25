@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.stream-video]
 verify_jwt = false
+
+[functions.cloudflare-migrate]
+verify_jwt = true

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Shield, BarChart3, Gift, Users, Wallet, Trash2, Link2, LogOut } from "lucide-react";
+import { Shield, BarChart3, Gift, Users, Wallet, Trash2, Link2, LogOut, CloudUpload, TestTube } from "lucide-react";
 
 import OverviewTab from "@/components/admin/OverviewTab";
 import RewardApprovalTab from "@/components/admin/RewardApprovalTab";
@@ -12,6 +12,7 @@ import UserReviewTab from "@/components/admin/UserReviewTab";
 import WalletAbuseTab from "@/components/admin/WalletAbuseTab";
 import QuickDeleteTab from "@/components/admin/QuickDeleteTab";
 import BlockchainTab from "@/components/admin/BlockchainTab";
+import MediaMigrationTab from "@/components/admin/MediaMigrationTab";
 
 interface UserData {
   id: string;
