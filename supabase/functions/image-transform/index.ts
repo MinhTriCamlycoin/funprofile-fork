@@ -191,47 +191,63 @@ serve(async (req) => {
     console.log('Transform options:', cfOptions.join(','));
     console.log('Original URL:', imageUrl);
 
-    // Cloudflare Images - use imagedelivery.net for uploaded images
-    // or use Image Resizing via /cdn-cgi/image/ for external URLs
+    // Determine transformation method based on URL type
     
-    // Check if this is a Cloudflare Images delivery URL (uploaded to CF Images)
+    // 1. Cloudflare Images URLs (imagedelivery.net) - use variant path
     if (imageUrl.includes('imagedelivery.net')) {
-      // Already a CF Images URL - modify the variant path
-      const cfImageUrl = imageUrl.replace(/\/public$/, `/${cfOptions.join(',')}`);
-      console.log('Redirecting to CF Images variant:', cfImageUrl);
-      return Response.redirect(cfImageUrl, 302);
+      // Replace /public or any existing variant with transformation options
+      const transformedUrl = imageUrl.replace(/\/[^\/]+$/, `/${cfOptions.join(',')}`);
+      console.log('Redirecting to CF Images variant:', transformedUrl);
+      return Response.redirect(transformedUrl, 302);
     }
 
-    // For R2 URLs or external URLs, we need to proxy and transform
-    // Cloudflare Image Resizing requires the image to be fetched through CF
+    // 2. R2 or external URLs - use Image Resizing via cdn-cgi
+    // This requires Image Resizing to be enabled on your Cloudflare zone
+    const zoneDomain = 'fun.rich'; // Your CF zone with Image Resizing enabled
     
+    if (r2PublicUrl && imageUrl.includes(r2PublicUrl.replace('https://', ''))) {
+      // R2 URL - use Image Resizing
+      // Format: https://your-zone.com/cdn-cgi/image/{options}/{image-path}
+      const imagePath = imageUrl.replace(r2PublicUrl, '');
+      const resizingUrl = `https://${zoneDomain}/cdn-cgi/image/${cfOptions.join(',')}/${imageUrl}`;
+      console.log('Using Image Resizing URL:', resizingUrl);
+      
+      try {
+        const resizedResponse = await fetch(resizingUrl, {
+          headers: {
+            'Accept': 'image/avif,image/webp,image/*,*/*;q=0.8',
+          },
+        });
+
+        if (resizedResponse.ok) {
+          const contentType = resizedResponse.headers.get('content-type') || 'image/webp';
+          const imageBody = await resizedResponse.arrayBuffer();
+          
+          console.log('Image Resizing success, size:', imageBody.byteLength, 'bytes');
+          
+          return new Response(imageBody, {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': contentType,
+              'Cache-Control': 'public, max-age=31536000, immutable',
+              'CDN-Cache-Control': 'public, max-age=31536000',
+              'Vary': 'Accept',
+              'X-Transform-Mode': 'image-resizing',
+              'X-Transform-Options': cfOptions.join(','),
+            },
+          });
+        } else {
+          console.log('Image Resizing failed, status:', resizedResponse.status);
+        }
+      } catch (resizingError) {
+        console.error('Image Resizing error:', resizingError);
+      }
+    }
+
+    // 3. Fallback - proxy original image with caching
     try {
-      // Fetch the original image with transformation hints
-      // Since edge functions run on Deno (not Cloudflare Workers), 
-      // we can't use the cf.image option directly
+      console.log('Falling back to proxy mode');
       
-      // Option 1: If user has Image Resizing enabled on their zone,
-      // redirect to the zone's /cdn-cgi/image/ endpoint
-      
-      // Option 2: For now, use Sharp-like transformation via proxy
-      // (requires the image to be fetched and processed)
-      
-      // Since we don't have native image processing in Deno edge functions,
-      // the best approach is to redirect to a Cloudflare zone with Image Resizing
-      // or use Cloudflare Images upload + delivery
-      
-      // For now, let's redirect with transformation params as a URL hint
-      // This will work if the user accesses via a CF zone with Image Resizing
-      
-      // Build a redirect URL that includes transform params
-      const transformedUrl = new URL(imageUrl);
-      
-      // Add cache-busting transform identifier
-      transformedUrl.searchParams.set('cf_transform', cfOptions.join(','));
-      
-      console.log('Proxying image with caching...');
-      
-      // Fetch and proxy the original image with proper caching
       const proxyResponse = await fetch(imageUrl, {
         headers: {
           'Accept': 'image/avif,image/webp,image/*,*/*;q=0.8',
@@ -241,33 +257,26 @@ serve(async (req) => {
 
       if (!proxyResponse.ok) {
         console.error('Failed to fetch original image:', proxyResponse.status);
-        return new Response(
-          JSON.stringify({ error: 'Failed to fetch image', status: proxyResponse.status }),
-          { status: proxyResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return Response.redirect(imageUrl, 302);
       }
 
       const contentType = proxyResponse.headers.get('content-type') || 'image/jpeg';
       const imageBody = await proxyResponse.arrayBuffer();
       
-      console.log('Successfully proxied image, size:', imageBody.byteLength, 'bytes');
-      console.log('Note: For real-time transformation, use CF Image Resizing via zone or upload to CF Images');
+      console.log('Proxied image, size:', imageBody.byteLength, 'bytes');
 
       return new Response(imageBody, {
         headers: {
           ...corsHeaders,
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=31536000, immutable',
-          'CDN-Cache-Control': 'public, max-age=31536000',
+          'Cache-Control': 'public, max-age=86400',
           'Vary': 'Accept',
-          'X-Transform-Requested': cfOptions.join(','),
           'X-Transform-Mode': 'proxy',
-          'X-Original-Size': imageBody.byteLength.toString(),
+          'X-Transform-Requested': cfOptions.join(','),
         },
       });
     } catch (fetchError) {
-      console.error('Error fetching image:', fetchError);
-      // Ultimate fallback - redirect to original
+      console.error('Proxy error:', fetchError);
       return Response.redirect(imageUrl, 302);
     }
 
