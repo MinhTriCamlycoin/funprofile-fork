@@ -191,76 +191,46 @@ serve(async (req) => {
     console.log('Transform options:', cfOptions.join(','));
     console.log('Original URL:', imageUrl);
 
-    // Use Cloudflare Image Resizing via their proxy
-    // Format: https://imageresizing.example.com/cdn-cgi/image/{options}/{imageUrl}
-    // Or use Cloudflare Images API directly
+    // Fetch the original image and stream it back
+    // This acts as a proxy with proper caching headers
+    // Note: For actual resizing, you need Cloudflare Images subscription or Polish enabled on your zone
     
-    const cfApiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
-    
-    if (cfApiToken) {
-      // Use Cloudflare Images Transform API
-      const transformUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v1/transform`;
-      
-      const response = await fetch(transformUrl, {
-        method: 'POST',
+    try {
+      const imageResponse = await fetch(imageUrl, {
         headers: {
-          'Authorization': `Bearer ${cfApiToken}`,
-          'Content-Type': 'application/json',
+          'Accept': 'image/webp,image/avif,image/*,*/*;q=0.8',
         },
-        body: JSON.stringify({
-          url: imageUrl,
-          options: {
-            width: options.width,
-            height: options.height,
-            fit: options.fit || 'scale-down',
-            gravity: options.gravity || 'auto',
-            quality: options.quality || 85,
-            format: options.format || 'webp',
-            blur: options.blur,
-            brightness: options.brightness,
-            contrast: options.contrast,
-            sharpen: options.sharpen,
-            rotate: options.rotate,
-          }
-        }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Cloudflare Images API error:', errorData);
-        
-        // Fallback: redirect to original image
-        return Response.redirect(imageUrl, 302);
+      if (!imageResponse.ok) {
+        console.error('Failed to fetch original image:', imageResponse.status);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch image', status: imageResponse.status }),
+          { status: imageResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      // Stream the transformed image back
-      const contentType = response.headers.get('content-type') || 'image/webp';
-      
-      return new Response(response.body, {
+      const contentType = imageResponse.headers.get('content-type') || 'image/webp';
+      const imageBody = await imageResponse.arrayBuffer();
+
+      console.log('Successfully proxied image, size:', imageBody.byteLength, 'bytes');
+
+      return new Response(imageBody, {
         headers: {
           ...corsHeaders,
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000, immutable',
           'CDN-Cache-Control': 'public, max-age=31536000',
           'Vary': 'Accept',
+          'X-Transform-Options': cfOptions.join(','),
+          'X-Original-Url': imageUrl,
+          'X-Proxy-Mode': 'passthrough', // Indicates no transformation applied
         },
       });
-    } else {
-      // No API token - return redirect URL with transformation hints
-      // Client should use Cloudflare's cdn-cgi/image directly if on Cloudflare zone
-      const transformedUrl = new URL(imageUrl);
-      
-      // Add transformation params to URL for client-side handling
-      const responseData = {
-        original: imageUrl,
-        options: options,
-        message: 'Use Cloudflare zone with Image Resizing enabled for on-the-fly transforms',
-        fallbackUrl: imageUrl,
-      };
-
-      return new Response(JSON.stringify(responseData), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    } catch (fetchError) {
+      console.error('Error fetching image:', fetchError);
+      // Ultimate fallback - redirect to original
+      return Response.redirect(imageUrl, 302);
     }
 
   } catch (error) {
