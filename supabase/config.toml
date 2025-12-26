@@ -18,6 +18,9 @@ verify_jwt = true
 [functions.generate-upload-url]
 verify_jwt = true
 
+[functions.get-upload-url]
+verify_jwt = true
+
 [functions.claim-reward]
 verify_jwt = true
 
