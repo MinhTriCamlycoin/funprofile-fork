@@ -27,9 +27,17 @@ serve(async (req) => {
 
     // Parse request
     const url = new URL(req.url);
-    const action = url.searchParams.get('action');
 
-    // Authenticate user
+    // Parse body early (also used to carry `action` when calling via supabase.functions.invoke)
+    const body = await req.json().catch(() => ({}));
+
+    // Action can come from query string (legacy) OR request body (preferred)
+    const action = (url.searchParams.get('action') ?? body?.action) as string | null;
+
+    if (!action) {
+      throw new Error('Missing action');
+    }
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
@@ -66,8 +74,8 @@ serve(async (req) => {
 
       case 'get-upload-url': {
         // Create TUS upload URL for resumable uploads (One-time upload URL)
-        const body = await req.json().catch(() => ({}));
         const maxDurationSeconds = body.maxDurationSeconds || 900; // 15 minutes max
+
 
         console.log('[stream-video] Creating TUS upload URL, maxDuration:', maxDurationSeconds);
 
@@ -131,8 +139,8 @@ serve(async (req) => {
 
       case 'direct-upload': {
         // Direct Creator Upload for simpler flow (non-TUS, for smaller files)
-        const body = await req.json().catch(() => ({}));
         const maxDurationSeconds = body.maxDurationSeconds || 900;
+
 
         console.log('[stream-video] Creating direct upload URL, maxDuration:', maxDurationSeconds);
 
@@ -175,8 +183,8 @@ serve(async (req) => {
 
       case 'check-status': {
         // Check video processing status
-        const body = await req.json();
         const { uid } = body;
+
 
         if (!uid) {
           throw new Error('Missing video UID');
@@ -220,8 +228,8 @@ serve(async (req) => {
 
       case 'get-playback-url': {
         // Get playback URLs for a video
-        const body = await req.json();
         const { uid } = body;
+
 
         if (!uid) {
           throw new Error('Missing video UID');
@@ -260,8 +268,8 @@ serve(async (req) => {
 
       case 'delete': {
         // Delete a video
-        const body = await req.json();
         const { uid } = body;
+
 
         if (!uid) {
           throw new Error('Missing video UID');

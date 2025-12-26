@@ -39,34 +39,50 @@ export interface StreamVideoStatus {
 const MAX_DURATION_SECONDS = 900;
 
 /**
+ * Call backend stream-video function (preferred over manual fetch)
+ */
+async function callStreamVideo<T extends Record<string, any>, R = any>(
+  action: string,
+  payload?: T
+): Promise<R> {
+  const { data, error } = await supabase.functions.invoke('stream-video', {
+    body: { action, ...(payload || {}) },
+  });
+
+  if (error) {
+    console.error('[streamUpload] stream-video invoke error:', error);
+    throw new Error(error.message || 'Failed to call stream-video');
+  }
+
+  return data as R;
+}
+
+function assertCloudflareStreamUploadUrl(uploadUrl: string, kind: 'tus' | 'direct') {
+  // Direct upload URLs are typically https://upload.cloudflarestream.com/...
+  // TUS upload URLs are typically https://upload.cloudflarestream.com/tus/...
+  const ok = uploadUrl.includes('upload.cloudflarestream.com');
+  if (!ok) {
+    throw new Error(
+      `URL không phải từ CF Stream (${kind}). Received: ${uploadUrl}`
+    );
+  }
+}
+
+/**
  * Get a direct upload URL from Cloudflare Stream
  */
 async function getDirectUploadUrl(): Promise<{ uploadUrl: string; uid: string }> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
-    throw new Error('Not authenticated');
-  }
-
-  const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stream-video?action=direct-upload`;
-  
   console.log('[streamUpload] Getting direct upload URL...');
-  
-  const directResponse = await fetch(functionUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${sessionData.session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ maxDurationSeconds: MAX_DURATION_SECONDS }),
-  });
+  const result = await callStreamVideo<{ maxDurationSeconds: number }, { uploadUrl: string; uid: string }>(
+    'direct-upload',
+    { maxDurationSeconds: MAX_DURATION_SECONDS }
+  );
 
-  if (!directResponse.ok) {
-    const error = await directResponse.json().catch(() => ({ error: 'Upload failed' }));
-    console.error('[streamUpload] Failed to get direct upload URL:', error);
-    throw new Error(error.error || 'Failed to get upload URL');
+  if (!result?.uploadUrl || !result?.uid) {
+    throw new Error('Invalid direct upload response');
   }
 
-  const result = await directResponse.json();
+  assertCloudflareStreamUploadUrl(result.uploadUrl, 'direct');
   console.log('[streamUpload] Got direct upload URL, uid:', result.uid);
   return result;
 }
@@ -75,36 +91,23 @@ async function getDirectUploadUrl(): Promise<{ uploadUrl: string; uid: string }>
  * Get TUS upload URL for resumable uploads
  */
 async function getTusUploadUrl(fileSize: number): Promise<{ uploadUrl: string; uid: string }> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
-    throw new Error('Not authenticated');
-  }
-
-  const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stream-video?action=get-upload-url`;
-  
   console.log('[streamUpload] Getting TUS upload URL for file size:', formatBytes(fileSize));
 
-  const response = await fetch(functionUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${sessionData.session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ 
-      maxDurationSeconds: MAX_DURATION_SECONDS,
-      fileSize,
-    }),
+  const result = await callStreamVideo<
+    { maxDurationSeconds: number; fileSize: number },
+    { uploadUrl: string; uid: string; expiresAt?: string }
+  >('get-upload-url', {
+    maxDurationSeconds: MAX_DURATION_SECONDS,
+    fileSize,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to get TUS URL' }));
-    console.error('[streamUpload] Failed to get TUS upload URL:', error);
-    throw new Error(error.error || 'Failed to get TUS upload URL');
+  if (!result?.uploadUrl || !result?.uid) {
+    throw new Error('Invalid TUS upload response');
   }
 
-  const result = await response.json();
+  assertCloudflareStreamUploadUrl(result.uploadUrl, 'tus');
   console.log('[streamUpload] Got TUS upload URL:', result.uploadUrl, 'uid:', result.uid);
-  return result;
+  return { uploadUrl: result.uploadUrl, uid: result.uid };
 }
 
 /**
