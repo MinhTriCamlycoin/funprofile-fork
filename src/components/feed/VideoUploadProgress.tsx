@@ -132,7 +132,7 @@ export const VideoUploadProgress = memo(({
       {/* Warning for large uploads */}
       {state === 'uploading' && bytesTotal > 100 * 1024 * 1024 && (
         <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-700 dark:text-yellow-400">
-          ⚠️ Video lớn - vui lòng không đóng tab trong khi upload
+          ⚠️ Video lớn - vui lòng không đóng tab trong khi upload (có thể resume nếu mạng chập chờn)
         </div>
       )}
     </div>

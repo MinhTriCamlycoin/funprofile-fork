@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadToR2 } from '@/utils/r2Upload';
-import { uploadToStream, StreamUploadProgress } from '@/utils/streamUpload';
+import { uploadToStream } from '@/utils/streamUpload';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -244,24 +244,12 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
 
             setVideoUploadState('ready');
             toast.success('Video đã tải lên thành công!');
-          } catch (error: any) {
-            console.error('Stream upload failed:', error);
-            setVideoUploadState('error');
-            
-            // For large files (>50MB), don't fallback to R2 as it doesn't support large uploads
-            if (item.file.size > 50 * 1024 * 1024) {
-              toast.error(`Không thể tải video lên: ${error.message || 'Vui lòng thử lại'}`);
-              throw error; // Rethrow to stop the post creation
-            }
-            
-            // Only fallback to R2 for smaller videos
-            toast.error('Không thể tải video lên Stream, đang dùng phương thức dự phòng...');
-            const r2Result = await uploadToR2(item.file, 'videos');
-            mediaUrls.push({
-              url: r2Result.url,
-              type: 'video',
-            });
-          }
+           } catch (error: any) {
+             console.error('Stream upload failed:', error);
+             setVideoUploadState('error');
+             toast.error(`Không thể tải video lên: ${error.message || 'Vui lòng thử lại'}`);
+             throw error; // Stop post creation when video upload fails
+           }
         } else {
           // Use R2 for images
           const result = await uploadToR2(item.file, 'posts');
