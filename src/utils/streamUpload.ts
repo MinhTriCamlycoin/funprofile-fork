@@ -9,6 +9,9 @@ export interface StreamUploadProgress {
   // Enhanced progress info
   uploadSpeed?: number; // bytes per second
   eta?: number; // estimated seconds remaining
+  // Processing state (after upload complete)
+  processingState?: string; // 'queued' | 'inprogress' | 'ready' | 'error'
+  processingProgress?: number; // 0-100 for encoding progress
 }
 
 export interface StreamUploadResult {
@@ -37,6 +40,67 @@ export interface StreamVideoStatus {
 
 // Max duration in seconds (15 minutes)
 const MAX_DURATION_SECONDS = 900;
+
+// Polling configuration for video processing
+const POLL_INTERVAL_MS = 3000; // 3 seconds
+const POLL_MAX_ATTEMPTS = 120; // 6 minutes max wait for processing
+
+/**
+ * Poll Cloudflare Stream for video readyToStream status
+ * This ensures we only report success when video is actually playable
+ */
+async function pollForVideoReady(
+  uid: string,
+  onProgress?: (progress: StreamUploadProgress) => void
+): Promise<StreamVideoStatus> {
+  console.log('[streamUpload] Polling for video ready status:', uid);
+  
+  for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
+    try {
+      const status = await callStreamVideo<{ uid: string }, StreamVideoStatus>(
+        'check-status',
+        { uid }
+      );
+      
+      console.log(`[streamUpload] Poll attempt ${attempt + 1}/${POLL_MAX_ATTEMPTS}:`, {
+        state: status.status?.state,
+        readyToStream: status.readyToStream,
+        pctComplete: status.status?.pctComplete,
+      });
+      
+      // Update progress to show processing state
+      if (onProgress) {
+        onProgress({
+          bytesUploaded: 100,
+          bytesTotal: 100,
+          percentage: 100,
+          processingState: status.status?.state || 'processing',
+          processingProgress: status.status?.pctComplete ? parseInt(status.status.pctComplete) : undefined,
+        });
+      }
+      
+      if (status.readyToStream) {
+        return status;
+      }
+      
+      if (status.status?.state === 'error') {
+        throw new Error(status.status.errorReasonText || 'Video processing failed');
+      }
+      
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+    } catch (error) {
+      console.error('[streamUpload] Poll error:', error);
+      // Continue polling on transient errors
+      if (attempt >= POLL_MAX_ATTEMPTS - 1) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+    }
+  }
+  
+  throw new Error('Video processing timeout - please try again');
+}
 
 /**
  * Call backend stream-video function (preferred over manual fetch)
@@ -181,14 +245,25 @@ async function uploadDirect(
         }
       });
 
-      xhr.addEventListener('load', () => {
+      xhr.addEventListener('load', async () => {
         console.log('[streamUpload] XHR load event, status:', xhr.status);
         if (xhr.status >= 200 && xhr.status < 300) {
-          console.log('[streamUpload] Direct upload complete, uid:', uid);
-          resolve({
-            uid,
-            playbackUrl: `https://iframe.videodelivery.net/${uid}`,
-          });
+          console.log('[streamUpload] Direct upload complete, waiting for processing, uid:', uid);
+          
+          // Poll for readyToStream status before declaring success
+          try {
+            const status = await pollForVideoReady(uid, onProgress);
+            console.log('[streamUpload] Video ready to stream:', uid);
+            resolve({
+              uid,
+              playbackUrl: `https://iframe.videodelivery.net/${uid}`,
+              thumbnailUrl: status.thumbnail,
+            });
+          } catch (pollError) {
+            console.error('[streamUpload] Video processing failed:', pollError);
+            onError?.(pollError as Error);
+            reject(pollError);
+          }
         } else {
           const error = new Error(`Upload failed with status: ${xhr.status}`);
           console.error('[streamUpload] Upload failed:', xhr.status, xhr.responseText);
@@ -285,12 +360,23 @@ export async function uploadToStreamTus(
           console.log('[streamUpload] TUS progress:', progress.percentage + '%', formatBytes(speed) + '/s');
           onProgress?.(progress);
         },
-        onSuccess: () => {
-          console.log('[streamUpload] TUS upload complete, uid:', uid);
-          resolve({
-            uid,
-            playbackUrl: `https://iframe.videodelivery.net/${uid}`,
-          });
+        onSuccess: async () => {
+          console.log('[streamUpload] TUS upload complete, waiting for processing, uid:', uid);
+          
+          // Poll for readyToStream status before declaring success
+          try {
+            const status = await pollForVideoReady(uid, onProgress);
+            console.log('[streamUpload] Video ready to stream:', uid);
+            resolve({
+              uid,
+              playbackUrl: `https://iframe.videodelivery.net/${uid}`,
+              thumbnailUrl: status.thumbnail,
+            });
+          } catch (pollError) {
+            console.error('[streamUpload] Video processing failed:', pollError);
+            onError?.(pollError as Error);
+            reject(pollError);
+          }
         },
       });
 

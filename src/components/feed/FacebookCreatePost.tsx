@@ -61,6 +61,8 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
     bytesTotal: 0,
     uploadSpeed: 0,
     eta: 0,
+    processingState: undefined as string | undefined,
+    processingProgress: undefined as number | undefined,
   });
 
   // Prevent accidental tab close during upload
@@ -219,13 +221,25 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
             const result = await uploadToStream(
               item.file,
               (progress) => {
-                setVideoUploadProgress(progress.percentage);
-                setUploadDetails({
-                  bytesUploaded: progress.bytesUploaded,
-                  bytesTotal: progress.bytesTotal,
-                  uploadSpeed: progress.uploadSpeed || 0,
-                  eta: progress.eta || 0,
-                });
+                // Update state based on whether we're uploading or processing
+                if (progress.processingState) {
+                  setVideoUploadState('processing');
+                  setUploadDetails(prev => ({
+                    ...prev,
+                    processingState: progress.processingState,
+                    processingProgress: progress.processingProgress,
+                  }));
+                } else {
+                  setVideoUploadProgress(progress.percentage);
+                  setUploadDetails({
+                    bytesUploaded: progress.bytesUploaded,
+                    bytesTotal: progress.bytesTotal,
+                    uploadSpeed: progress.uploadSpeed || 0,
+                    eta: progress.eta || 0,
+                    processingState: undefined,
+                    processingProgress: undefined,
+                  });
+                }
               },
               (error) => {
                 console.error('Stream upload error:', error);
@@ -516,6 +530,8 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
                         bytesTotal={uploadDetails.bytesTotal}
                         uploadSpeed={uploadDetails.uploadSpeed}
                         eta={uploadDetails.eta}
+                        processingState={uploadDetails.processingState}
+                        processingProgress={uploadDetails.processingProgress}
                       />
                     )}
                   </div>

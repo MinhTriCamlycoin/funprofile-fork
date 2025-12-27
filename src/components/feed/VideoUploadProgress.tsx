@@ -20,6 +20,9 @@ interface VideoUploadProgressProps {
   bytesTotal?: number;
   uploadSpeed?: number;
   eta?: number;
+  // Processing state info
+  processingState?: string;
+  processingProgress?: number;
 }
 
 /**
@@ -35,6 +38,8 @@ export const VideoUploadProgress = memo(({
   bytesTotal = 0,
   uploadSpeed = 0,
   eta = 0,
+  processingState,
+  processingProgress,
 }: VideoUploadProgressProps) => {
   if (state === 'idle') return null;
 
@@ -108,11 +113,18 @@ export const VideoUploadProgress = memo(({
             </div>
           )}
 
-          {/* Processing message */}
+          {/* Processing message with progress */}
           {state === 'processing' && (
-            <p className="text-xs text-muted-foreground">
-              Cloudflare đang xử lý video của bạn...
-            </p>
+            <div className="space-y-1">
+              {processingProgress !== undefined && processingProgress > 0 && (
+                <Progress value={processingProgress} className="h-1.5" />
+              )}
+              <p className="text-xs text-muted-foreground">
+                {processingState === 'queued' && '⏳ Đang chờ xử lý...'}
+                {processingState === 'inprogress' && `🔄 Đang mã hóa video... ${processingProgress || 0}%`}
+                {(!processingState || processingState === 'processing') && '🔄 Cloudflare đang xử lý video...'}
+              </p>
+            </div>
           )}
 
           {/* Success message */}

@@ -80,6 +80,15 @@ serve(async (req) => {
         console.log('[stream-video] Creating TUS upload URL, maxDuration:', maxDurationSeconds);
 
         // Use the Direct Creator Upload endpoint which returns a one-time TUS URL
+        // IMPORTANT: requireSignedURLs must be base64 encoded as "false" to make videos public
+        const uploadMetadata = [
+          `maxDurationSeconds ${btoa(maxDurationSeconds.toString())}`,
+          `requiresignedurls ${btoa('false')}`,
+          `name ${btoa(`upload_${user.id}_${Date.now()}`)}`,
+        ].join(',');
+
+        console.log('[stream-video] TUS metadata:', uploadMetadata);
+
         const response = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream?direct_user=true`,
           {
@@ -88,7 +97,7 @@ serve(async (req) => {
               'Authorization': `Bearer ${CLOUDFLARE_STREAM_API_TOKEN}`,
               'Tus-Resumable': '1.0.0',
               'Upload-Length': body.fileSize?.toString() || '0',
-              'Upload-Metadata': `maxDurationSeconds ${btoa(maxDurationSeconds.toString())}, requiresignedurls ${btoa('false')}`,
+              'Upload-Metadata': uploadMetadata,
             },
           }
         );
