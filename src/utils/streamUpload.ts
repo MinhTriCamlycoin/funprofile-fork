@@ -380,7 +380,7 @@ export async function uploadToStreamTus(
       let lastTime = Date.now();
 
       const upload = new tus.Upload(file, {
-        uploadUrl, // Use the pre-created upload URL
+        uploadUrl, // Use the pre-created upload URL directly - no resume
         headers: {
           // Cloudflare Stream TUS needs Tus-Resumable header
           'Tus-Resumable': '1.0.0',
@@ -391,8 +391,8 @@ export async function uploadToStreamTus(
           filename: file.name,
           filetype: file.type,
         },
-        // CRITICAL: Don't remove fingerprint on success to allow resume
-        removeFingerprintOnSuccess: false,
+        // CRITICAL: Remove fingerprint on success to prevent resume issues
+        removeFingerprintOnSuccess: true,
         // Debug callbacks
         onBeforeRequest: (req) => {
           const url = req.getURL();
@@ -473,15 +473,10 @@ export async function uploadToStreamTus(
         },
       });
 
-      // Check for previous uploads and resume if available
-      upload.findPreviousUploads().then((previousUploads) => {
-        if (previousUploads.length > 0) {
-          console.log('[streamUpload] Found previous upload, resuming...');
-          upload.resumeFromPreviousUpload(previousUploads[0]);
-        }
-        console.log('[streamUpload] Starting TUS upload...');
-        upload.start();
-      });
+      // IMPORTANT: Do NOT try to resume previous uploads - URLs expire quickly
+      // Always start fresh with the new uploadUrl we just received
+      console.log('[streamUpload] Starting fresh TUS upload (no resume)...');
+      upload.start();
 
     } catch (error) {
       console.error('[streamUpload] TUS setup error:', error);
