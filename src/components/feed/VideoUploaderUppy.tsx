@@ -27,8 +27,9 @@ interface UploadState {
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Use our edge function as TUS endpoint (it proxies to Cloudflare)
+// Use our backend function as TUS endpoint (it proxies to Cloudflare)
 const TUS_ENDPOINT = `${SUPABASE_URL}/functions/v1/stream-video`;
 
 // 50MB chunk size for stability
@@ -121,43 +122,43 @@ export const VideoUploaderUppy = ({
           debug: import.meta.env.DEV,
         });
 
-        // Configure TUS - point to our edge function which handles the proxy
+        // Configure TUS - point to our backend function which handles the proxy
         uppy.use(Tus, {
           endpoint: TUS_ENDPOINT,
           chunkSize: CHUNK_SIZE,
           retryDelays: [0, 1000, 3000, 5000, 10000],
           removeFingerprintOnSuccess: true,
           storeFingerprintForResuming: false,
-          // These headers are sent with the initial POST to our edge function
+          // These headers are sent with the initial POST to our backend function
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            apikey: SUPABASE_ANON_KEY,
+            authorization: `Bearer ${accessToken}`,
           },
-          // Ensure Tus-Resumable header is sent with ALL requests (including PATCH to Cloudflare)
-          onBeforeRequest: async (req) => {
+          // Make sure TUS-required header is sent on all requests
+          onBeforeRequest: (req) => {
             req.setHeader('Tus-Resumable', '1.0.0');
-            
-            // For requests to our edge function, include auth
+
             const url = req.getURL();
-            if (url.includes('functions/v1/stream-video')) {
-              const currentSession = await supabase.auth.getSession();
-              const token = currentSession.data.session?.access_token;
-              if (token) {
-                req.setHeader('Authorization', `Bearer ${token}`);
-              }
+            if (url.includes('/functions/v1/stream-video')) {
+              req.setHeader('apikey', SUPABASE_ANON_KEY);
+              req.setHeader('authorization', `Bearer ${accessToken}`);
             }
-            
-            console.log('[VideoUploaderUppy] TUS request:', req.getMethod(), url);
+
+            if (import.meta.env.DEV) {
+              console.log('[VideoUploaderUppy] TUS request:', req.getMethod(), url);
+            }
           },
           onAfterResponse: (req, res) => {
-            console.log('[VideoUploaderUppy] TUS response:', res.getStatus(), {
-              location: res.getHeader('Location'),
-              streamMediaId: res.getHeader('stream-media-id'),
-            });
-            
-            // Extract video UID from response
+            if (import.meta.env.DEV) {
+              console.log('[VideoUploaderUppy] TUS response:', res.getStatus(), {
+                location: res.getHeader('Location'),
+                streamMediaId: res.getHeader('stream-media-id'),
+              });
+            }
+
             const streamMediaId = res.getHeader('stream-media-id');
             if (streamMediaId) {
-              setUploadState(prev => ({ ...prev, videoUid: streamMediaId }));
+              setUploadState((prev) => ({ ...prev, videoUid: streamMediaId }));
             }
           },
         });
