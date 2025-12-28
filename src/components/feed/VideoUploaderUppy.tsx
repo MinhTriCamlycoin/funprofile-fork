@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import Uppy from '@uppy/core';
-import Tus from '@uppy/tus';
+import * as tus from 'tus-js-client';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -26,12 +25,6 @@ interface UploadState {
   error?: string;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-// Use our backend function as TUS endpoint (it proxies to Cloudflare)
-const TUS_ENDPOINT = `${SUPABASE_URL}/functions/v1/stream-video`;
-
 // 50MB chunk size for stability
 const CHUNK_SIZE = 50 * 1024 * 1024;
 
@@ -51,17 +44,17 @@ export const VideoUploaderUppy = ({
     uploadSpeed: 0,
   });
   
-  const uppyRef = useRef<Uppy | null>(null);
+  const tusUploadRef = useRef<tus.Upload | null>(null);
   const lastBytesRef = useRef(0);
   const lastTimeRef = useRef(Date.now());
   const isUploadingRef = useRef(false);
 
-  // Cleanup Uppy on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (uppyRef.current) {
-        uppyRef.current.cancelAll();
-        uppyRef.current = null;
+      if (tusUploadRef.current) {
+        tusUploadRef.current.abort();
+        tusUploadRef.current = null;
       }
     };
   }, []);
@@ -98,156 +91,101 @@ export const VideoUploaderUppy = ({
 
         onUploadStart?.();
 
-        // Get auth token
-        const session = await supabase.auth.getSession();
-        const accessToken = session.data.session?.access_token;
-        
-        if (!accessToken) {
-          throw new Error('Bạn cần đăng nhập để tải video');
+        console.log('[VideoUploader] Starting upload, file size:', selectedFile.size);
+
+        // Step 1: Get Direct Upload URL from our backend
+        const { data, error } = await supabase.functions.invoke('stream-video', {
+          body: {
+            action: 'get-tus-upload-url',
+            fileSize: selectedFile.size,
+            fileName: selectedFile.name,
+            fileType: selectedFile.type,
+          },
+        });
+
+        if (error) {
+          console.error('[VideoUploader] Failed to get upload URL:', error);
+          throw new Error(error.message || 'Không thể tạo URL tải lên');
         }
 
-        console.log('[VideoUploaderUppy] Starting upload, file size:', selectedFile.size);
+        const { uploadUrl, uid } = data;
 
-        // Create Uppy instance - use our edge function as endpoint
-        // The edge function will proxy to Cloudflare and return Location header
-        const uppy = new Uppy({
-          id: 'video-uploader',
-          autoProceed: true,
-          allowMultipleUploadBatches: false,
-          restrictions: {
-            maxFileSize: 1024 * 1024 * 1024, // 1GB max
-            maxNumberOfFiles: 1,
-            allowedFileTypes: ['video/*'],
-          },
-          debug: import.meta.env.DEV,
+        if (!uploadUrl || !uid) {
+          throw new Error('Không nhận được URL tải lên từ server');
+        }
+
+        console.log('[VideoUploader] Got Direct Upload URL:', {
+          uploadUrl: uploadUrl.substring(0, 80),
+          uid,
         });
 
-        // Configure TUS - point to our backend function which handles the proxy
-        uppy.use(Tus, {
-          endpoint: TUS_ENDPOINT,
-          chunkSize: CHUNK_SIZE,
-          retryDelays: [0, 1000, 3000, 5000, 10000],
-          removeFingerprintOnSuccess: true,
-          storeFingerprintForResuming: false,
-          // IMPORTANT: Do NOT set static headers here.
-          // Uppy/TUS will reuse them for the Cloudflare upload URL (Location), which can trigger CORS/network errors.
-          headers: {},
-          onBeforeRequest: (req) => {
-            // TUS required header
-            req.setHeader('Tus-Resumable', '1.0.0');
-
-            const url = req.getURL();
-
-            // Only attach backend headers when talking to OUR backend function.
-            // Never attach them to the Cloudflare upload URL.
-            if (url.includes('/functions/v1/stream-video')) {
-              req.setHeader('apikey', SUPABASE_ANON_KEY);
-              // No user auth required for the TUS POST branch; keep requests simple.
-              // (Action-based calls use supabase.functions.invoke which already includes auth.)
-            }
-
-            if (import.meta.env.DEV) {
-              console.log('[VideoUploaderUppy] TUS request:', req.getMethod(), url, {
-                hasApiKey: url.includes('/functions/v1/stream-video'),
-              });
-            }
-          },
-          onAfterResponse: (req, res) => {
-            if (import.meta.env.DEV) {
-              console.log('[VideoUploaderUppy] TUS response:', res.getStatus(), {
-                location: res.getHeader('Location'),
-                streamMediaId: res.getHeader('stream-media-id'),
-              });
-            }
-
-            const streamMediaId = res.getHeader('stream-media-id');
-            if (streamMediaId) {
-              setUploadState((prev) => ({ ...prev, videoUid: streamMediaId }));
-            }
-          },
-        });
-
+        // Save UID to state
         setUploadState(prev => ({
           ...prev,
+          videoUid: uid,
           status: 'uploading',
         }));
 
-        // Event handlers
-        uppy.on('progress', (progress) => {
-          const now = Date.now();
-          const timeDiff = (now - lastTimeRef.current) / 1000;
-          const currentBytes = (progress / 100) * selectedFile.size;
-          const bytesDiff = currentBytes - lastBytesRef.current;
-          const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+        // Step 2: Upload directly to Cloudflare using tus-js-client
+        // NO AUTH HEADERS NEEDED - this is a Direct Creator Upload URL
+        const upload = new tus.Upload(selectedFile, {
+          uploadUrl, // Use the pre-signed URL directly
+          chunkSize: CHUNK_SIZE,
+          retryDelays: [0, 1000, 3000, 5000, 10000],
+          removeFingerprintOnSuccess: true,
+          // No headers needed for Direct Creator Upload!
+          headers: {},
+          metadata: {
+            filename: selectedFile.name,
+            filetype: selectedFile.type,
+          },
+          onProgress: (bytesUploaded, bytesTotal) => {
+            const now = Date.now();
+            const timeDiff = (now - lastTimeRef.current) / 1000;
+            const bytesDiff = bytesUploaded - lastBytesRef.current;
+            const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
 
-          lastBytesRef.current = currentBytes;
-          lastTimeRef.current = now;
+            lastBytesRef.current = bytesUploaded;
+            lastTimeRef.current = now;
 
-          setUploadState(prev => ({
-            ...prev,
-            progress,
-            bytesUploaded: currentBytes,
-            uploadSpeed: speed > 0 ? speed : prev.uploadSpeed,
-          }));
-        });
+            const progress = Math.round((bytesUploaded / bytesTotal) * 100);
 
-        uppy.on('upload-progress', (file, progress) => {
-          if (file && progress) {
+            console.log('[VideoUploader] Progress:', progress + '%');
+
             setUploadState(prev => ({
               ...prev,
-              bytesUploaded: progress.bytesUploaded || 0,
-              bytesTotal: progress.bytesTotal || selectedFile.size,
+              progress,
+              bytesUploaded,
+              bytesTotal,
+              uploadSpeed: speed > 0 ? speed : prev.uploadSpeed,
             }));
-          }
-        });
+          },
+          onSuccess: async () => {
+            console.log('[VideoUploader] Upload complete! UID:', uid);
 
-        uppy.on('upload-success', async (file, response) => {
-          console.log('[VideoUploaderUppy] Upload success!', response);
-          
-          // Get UID from state or try to extract from upload URL
-          let videoUid = uploadState.videoUid;
-          
-          if (!videoUid && response.uploadURL) {
-            // Try to extract UID from URL like: https://upload.videodelivery.net/tus/abc123...
-            const match = response.uploadURL.match(/\/tus\/([a-f0-9]{32})/);
-            if (match) {
-              videoUid = match[1];
-            }
-          }
+            setUploadState(prev => ({
+              ...prev,
+              status: 'processing',
+              progress: 100,
+            }));
 
-          if (!videoUid) {
-            // If still no UID, check the current state again
-            videoUid = (document.querySelector('[data-video-uid]') as HTMLElement)?.dataset.videoUid;
-          }
-
-          setUploadState(prev => ({
-            ...prev,
-            status: 'processing',
-            progress: 100,
-            videoUid: videoUid || prev.videoUid,
-          }));
-
-          // Use the UID from state if available
-          const finalUid = videoUid || uploadState.videoUid;
-
-          if (finalUid) {
-            // Update video settings
+            // Update video settings to make it public
             try {
               await supabase.functions.invoke('stream-video', {
                 body: {
                   action: 'update-video-settings',
-                  uid: finalUid,
+                  uid,
                   requireSignedURLs: false,
                   allowedOrigins: ['*'],
                 },
               });
-              console.log('[VideoUploaderUppy] Video settings updated');
+              console.log('[VideoUploader] Video settings updated');
             } catch (err) {
-              console.warn('[VideoUploaderUppy] Failed to update settings:', err);
+              console.warn('[VideoUploader] Failed to update settings:', err);
             }
 
             // Success!
-            const streamUrl = `https://iframe.videodelivery.net/${finalUid}`;
+            const streamUrl = `https://iframe.videodelivery.net/${uid}`;
             
             setUploadState(prev => ({
               ...prev,
@@ -256,64 +194,40 @@ export const VideoUploaderUppy = ({
 
             isUploadingRef.current = false;
             toast.success('Video đã tải lên thành công!');
-            onUploadComplete({ uid: finalUid, url: streamUrl });
-          } else {
-            console.warn('[VideoUploaderUppy] Upload completed but no UID found');
-            // Still mark as ready - video is uploaded
+            onUploadComplete({ uid, url: streamUrl });
+          },
+          onError: (error) => {
+            console.error('[VideoUploader] TUS upload error:', error);
+            isUploadingRef.current = false;
+
             setUploadState(prev => ({
               ...prev,
-              status: 'ready',
+              status: 'error',
+              error: error?.message || 'Tải lên thất bại',
             }));
-            isUploadingRef.current = false;
-            toast.success('Video đã tải lên!');
-            
-            // Try to get URL from response
-            if (response.uploadURL) {
-              onUploadComplete({ uid: 'unknown', url: response.uploadURL });
-            }
-          }
+
+            onUploadError?.(error || new Error('Upload failed'));
+            toast.error(`Tải lên thất bại: ${error?.message || 'Vui lòng thử lại'}`);
+          },
         });
 
-        uppy.on('upload-error', (file, error) => {
-          console.error('[VideoUploaderUppy] Upload error:', error);
-          isUploadingRef.current = false;
-          
-          setUploadState(prev => ({
-            ...prev,
-            status: 'error',
-            error: error?.message || 'Tải lên thất bại',
-          }));
-          
-          onUploadError?.(error || new Error('Upload failed'));
-          toast.error(`Tải lên thất bại: ${error?.message || 'Vui lòng thử lại'}`);
-        });
+        tusUploadRef.current = upload;
 
-        uppy.on('error', (error) => {
-          console.error('[VideoUploaderUppy] Uppy error:', error);
-          isUploadingRef.current = false;
-        });
-
-        uppyRef.current = uppy;
-
-        // Add file and start upload
-        uppy.addFile({
-          name: selectedFile.name,
-          type: selectedFile.type,
-          data: selectedFile,
-          source: 'Local',
-        });
+        // Start the upload
+        console.log('[VideoUploader] Starting TUS upload to Cloudflare...');
+        upload.start();
 
       } catch (error) {
-        console.error('[VideoUploaderUppy] Error:', error);
+        console.error('[VideoUploader] Error:', error);
         isUploadingRef.current = false;
-        
+
         const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
         setUploadState(prev => ({
           ...prev,
           status: 'error',
           error: errorMessage,
         }));
-        
+
         onUploadError?.(error instanceof Error ? error : new Error(errorMessage));
         toast.error(`Lỗi: ${errorMessage}`);
       }
@@ -323,12 +237,12 @@ export const VideoUploaderUppy = ({
   }, [selectedFile, onUploadComplete, onUploadError, onUploadStart]);
 
   const handleCancel = useCallback(() => {
-    if (uppyRef.current) {
-      uppyRef.current.cancelAll();
-      uppyRef.current = null;
+    if (tusUploadRef.current) {
+      tusUploadRef.current.abort();
+      tusUploadRef.current = null;
     }
     isUploadingRef.current = false;
-    
+
     setUploadState({
       status: 'idle',
       progress: 0,
@@ -358,7 +272,6 @@ export const VideoUploaderUppy = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Calculate ETA
   const getETA = (): string => {
     if (uploadState.uploadSpeed <= 0) return '--:--';
     const remaining = uploadState.bytesTotal - uploadState.bytesUploaded;
