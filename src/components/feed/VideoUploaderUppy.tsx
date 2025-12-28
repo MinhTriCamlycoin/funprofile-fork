@@ -7,7 +7,7 @@ import { Video, X, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react
 import { toast } from 'sonner';
 
 interface VideoUploaderUppyProps {
-  onUploadComplete: (result: { uid: string; url: string; thumbnailUrl: string }) => void;
+  onUploadComplete: (result: { uid: string; url: string; thumbnailUrl: string; localThumbnail?: string }) => void;
   onUploadError?: (error: Error) => void;
   onUploadStart?: () => void;
   onRemove?: () => void;
@@ -23,10 +23,59 @@ interface UploadState {
   uploadSpeed: number;
   videoUid?: string;
   error?: string;
+  localThumbnail?: string;
 }
 
 // 50MB chunk size for stability
 const CHUNK_SIZE = 50 * 1024 * 1024;
+
+/**
+ * Generate a thumbnail from video file using canvas
+ */
+const generateVideoThumbnail = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    
+    const cleanup = () => {
+      URL.revokeObjectURL(video.src);
+    };
+    
+    video.onloadeddata = () => {
+      // Seek to 1 second or 25% of video, whichever is smaller
+      video.currentTime = Math.min(1, video.duration * 0.25);
+    };
+    
+    video.onseeked = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx?.drawImage(video, 0, 0);
+      const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
+      cleanup();
+      resolve(thumbnailUrl);
+    };
+    
+    video.onerror = () => {
+      cleanup();
+      reject(new Error('Cannot generate thumbnail from video'));
+    };
+    
+    // Timeout fallback
+    setTimeout(() => {
+      if (!canvas.width) {
+        cleanup();
+        reject(new Error('Thumbnail generation timeout'));
+      }
+    }, 10000);
+    
+    video.src = URL.createObjectURL(file);
+  });
+};
 
 export const VideoUploaderUppy = ({
   onUploadComplete,
@@ -92,6 +141,18 @@ export const VideoUploaderUppy = ({
         onUploadStart?.();
 
         console.log('[VideoUploader] Starting upload, file size:', selectedFile.size);
+
+        // Generate local thumbnail immediately (don't await - run in parallel)
+        let localThumbnail: string | undefined;
+        generateVideoThumbnail(selectedFile)
+          .then(thumb => {
+            localThumbnail = thumb;
+            setUploadState(prev => ({ ...prev, localThumbnail: thumb }));
+            console.log('[VideoUploader] Local thumbnail generated');
+          })
+          .catch(err => {
+            console.warn('[VideoUploader] Failed to generate local thumbnail:', err);
+          });
 
         // Step 1: Get Direct Upload URL from our backend
         const { data, error } = await supabase.functions.invoke('stream-video', {
@@ -186,7 +247,7 @@ export const VideoUploaderUppy = ({
 
             // Success!
             const streamUrl = `https://iframe.videodelivery.net/${uid}`;
-            const thumbnailUrl = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=1s`;
+            const cloudflareThumb = `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=1s`;
             
             setUploadState(prev => ({
               ...prev,
@@ -195,7 +256,14 @@ export const VideoUploaderUppy = ({
 
             isUploadingRef.current = false;
             toast.success('Video đã tải lên thành công!');
-            onUploadComplete({ uid, url: streamUrl, thumbnailUrl });
+            
+            // Pass both local and cloudflare thumbnails
+            onUploadComplete({ 
+              uid, 
+              url: streamUrl, 
+              thumbnailUrl: cloudflareThumb,
+              localThumbnail 
+            });
           },
           onError: (error) => {
             console.error('[VideoUploader] TUS upload error:', error);
@@ -345,15 +413,19 @@ export const VideoUploaderUppy = ({
       {/* Processing state with thumbnail preview */}
       {uploadState.status === 'processing' && uploadState.videoUid && (
         <div className="space-y-3">
-          <div className="relative rounded-lg overflow-hidden">
-            <img 
-              src={`https://videodelivery.net/${uploadState.videoUid}/thumbnails/thumbnail.jpg?time=1s`}
-              alt="Video thumbnail"
-              className="w-full h-32 object-cover bg-muted"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
+          <div className="relative rounded-lg overflow-hidden bg-muted h-32">
+            {/* Use local thumbnail first, fallback to Cloudflare */}
+            {uploadState.localThumbnail ? (
+              <img 
+                src={uploadState.localThumbnail}
+                alt="Video thumbnail"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Video className="w-12 h-12 text-muted-foreground" />
+              </div>
+            )}
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-white animate-spin" />
               <span className="text-white text-sm ml-2">Đang xử lý...</span>
@@ -368,15 +440,19 @@ export const VideoUploaderUppy = ({
       {/* Success state with thumbnail preview */}
       {uploadState.status === 'ready' && uploadState.videoUid && (
         <div className="space-y-2">
-          <div className="relative rounded-lg overflow-hidden">
-            <img 
-              src={`https://videodelivery.net/${uploadState.videoUid}/thumbnails/thumbnail.jpg?time=1s`}
-              alt="Video thumbnail"
-              className="w-full h-32 object-cover bg-muted"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
+          <div className="relative rounded-lg overflow-hidden bg-muted h-32">
+            {/* Use local thumbnail first, fallback to Video icon */}
+            {uploadState.localThumbnail ? (
+              <img 
+                src={uploadState.localThumbnail}
+                alt="Video thumbnail"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Video className="w-12 h-12 text-muted-foreground" />
+              </div>
+            )}
             <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 rounded px-2 py-1">
               <CheckCircle className="w-4 h-4 text-green-400" />
               <span className="text-white text-xs">Sẵn sàng</span>

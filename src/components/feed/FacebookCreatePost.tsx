@@ -59,7 +59,7 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
   
   // Uppy video upload state
   const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
-  const [uppyVideoResult, setUppyVideoResult] = useState<{ uid: string; url: string; thumbnailUrl: string } | null>(null);
+  const [uppyVideoResult, setUppyVideoResult] = useState<{ uid: string; url: string; thumbnailUrl: string; localThumbnail?: string } | null>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   
   // Enhanced upload progress state
@@ -443,31 +443,34 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
 
                 {/* Show uploaded video result with thumbnail */}
                 {uppyVideoResult && !pendingVideoFile && (
-                  <div className="mb-3 relative rounded-lg overflow-hidden border border-green-500/50">
-                    <img 
-                      src={uppyVideoResult.thumbnailUrl}
-                      alt="Video preview"
-                      className="w-full h-48 object-cover bg-muted"
-                      onError={(e) => {
-                        // Fallback to placeholder if thumbnail not ready
-                        e.currentTarget.src = '';
-                        e.currentTarget.className = 'w-full h-48 bg-muted flex items-center justify-center';
-                      }}
-                    />
+                  <div className="mb-3 relative rounded-lg overflow-hidden border border-green-500/50 bg-muted h-48">
+                    {/* Prioritize local thumbnail, then Cloudflare, then fallback */}
+                    {uppyVideoResult.localThumbnail ? (
+                      <img 
+                        src={uppyVideoResult.localThumbnail}
+                        alt="Video preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Video className="w-16 h-16 text-muted-foreground" />
+                      </div>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => setUppyVideoResult(null)}
-                      className="absolute top-2 right-2 h-8 w-8 bg-black/50 hover:bg-black/70 text-white"
+                      className="absolute top-2 right-2 h-8 w-8 bg-black/50 hover:bg-black/70 text-white rounded-full"
                     >
                       <X className="w-4 h-4" />
                     </Button>
                     <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 rounded px-2 py-1">
                       <CheckCircle className="w-4 h-4 text-green-400" />
-                      <span className="text-white text-xs">Sẵn sàng</span>
+                      <span className="text-white text-xs font-medium">Sẵn sàng đăng</span>
                     </div>
                     <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 rounded px-2 py-1">
                       <Video className="w-4 h-4 text-white" />
+                      <span className="text-white text-xs">Video</span>
                     </div>
                   </div>
                 )}
