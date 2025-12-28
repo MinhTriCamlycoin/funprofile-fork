@@ -75,31 +75,61 @@ export const StreamPlayer = memo(({
   const [hasError, setHasError] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [useIframeFallback, setUseIframeFallback] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { type, url, uid } = parseVideoSource(src);
+  
+  // Generate thumbnail URL from UID
+  const thumbnailUrl = uid ? `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=1s` : poster;
 
   // For iframe embeds, use iframe directly
   if (type === 'iframe' || useIframeFallback) {
     const iframeUrl = type === 'iframe' ? url : `https://iframe.videodelivery.net/${uid || src}`;
     
+    // If video is still processing or has error, show thumbnail with processing message
+    if (hasError || isProcessing) {
+      return (
+        <div className={cn('relative bg-black aspect-video', className)}>
+          {thumbnailUrl && (
+            <img 
+              src={thumbnailUrl} 
+              alt="Video thumbnail"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Hide broken thumbnail
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          )}
+          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+            <span className="text-white text-sm">Đang xử lý video...</span>
+            <span className="text-white/60 text-xs mt-1">Vui lòng đợi trong giây lát</span>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className={cn('relative bg-black aspect-video', className)}>
         <iframe
-          src={`${iframeUrl}?${autoPlay ? 'autoplay=true&' : ''}${muted ? 'muted=true&' : ''}${loop ? 'loop=true&' : ''}controls=${controls ? 'true' : 'false'}&preload=auto`}
+          src={`${iframeUrl}?${autoPlay ? 'autoplay=true&' : ''}${muted ? 'muted=true&' : ''}${loop ? 'loop=true&' : ''}controls=${controls ? 'true' : 'false'}&preload=auto&poster=${encodeURIComponent(thumbnailUrl || '')}`}
           className="w-full h-full"
           allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           loading="lazy"
           onLoad={() => {
             setIsLoading(false);
+            setIsProcessing(false);
             onReady?.();
           }}
           onError={() => {
+            // Video might be processing, show processing state instead of error
+            setIsProcessing(true);
             setHasError(true);
-            onError?.(new Error('Video embed failed'));
           }}
         />
-        {isLoading && (
+        {isLoading && !isProcessing && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <Loader2 className="w-8 h-8 text-white animate-spin" />
           </div>
@@ -270,12 +300,24 @@ export const StreamPlayer = memo(({
     }
   };
 
+  // Show processing state instead of error (video might still be encoding)
   if (hasError) {
     return (
-      <div className={cn('relative bg-black/90 flex items-center justify-center aspect-video', className)}>
-        <div className="text-center text-white/70">
-          <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-          <p className="text-sm">Không thể phát video</p>
+      <div className={cn('relative bg-black aspect-video', className)}>
+        {thumbnailUrl && (
+          <img 
+            src={thumbnailUrl} 
+            alt="Video thumbnail"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        )}
+        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+          <span className="text-white text-sm">Đang xử lý video...</span>
+          <span className="text-white/60 text-xs mt-1">Vui lòng đợi trong giây lát</span>
         </div>
       </div>
     );

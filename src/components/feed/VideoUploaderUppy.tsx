@@ -97,6 +97,7 @@ export const VideoUploaderUppy = ({
   const lastBytesRef = useRef(0);
   const lastTimeRef = useRef(Date.now());
   const isUploadingRef = useRef(false);
+  const localThumbnailRef = useRef<string | undefined>(undefined);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -143,10 +144,9 @@ export const VideoUploaderUppy = ({
         console.log('[VideoUploader] Starting upload, file size:', selectedFile.size);
 
         // Generate local thumbnail immediately (don't await - run in parallel)
-        let localThumbnail: string | undefined;
         generateVideoThumbnail(selectedFile)
           .then(thumb => {
-            localThumbnail = thumb;
+            localThumbnailRef.current = thumb;
             setUploadState(prev => ({ ...prev, localThumbnail: thumb }));
             console.log('[VideoUploader] Local thumbnail generated');
           })
@@ -257,12 +257,12 @@ export const VideoUploaderUppy = ({
             isUploadingRef.current = false;
             toast.success('Video đã tải lên thành công!');
             
-            // Pass both local and cloudflare thumbnails
+            // Pass both local and cloudflare thumbnails (read from ref to get latest value)
             onUploadComplete({ 
               uid, 
               url: streamUrl, 
               thumbnailUrl: cloudflareThumb,
-              localThumbnail 
+              localThumbnail: localThumbnailRef.current 
             });
           },
           onError: (error) => {

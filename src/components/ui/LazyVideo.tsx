@@ -41,6 +41,19 @@ export const LazyVideo = memo(({
 
   // Check if this is a Cloudflare Stream video
   const isStream = isStreamUrl(src);
+  
+  // Auto-generate poster from Cloudflare Stream URL
+  const generateStreamPoster = (videoUrl: string): string | undefined => {
+    // Extract UID from iframe.videodelivery.net/{uid}
+    const match = videoUrl.match(/iframe\.videodelivery\.net\/([a-f0-9]+)/i);
+    if (match) {
+      return `https://videodelivery.net/${match[1]}/thumbnails/thumbnail.jpg?time=1s`;
+    }
+    return undefined;
+  };
+  
+  // Use provided poster or auto-generate from stream URL
+  const effectivePoster = poster || (isStream ? generateStreamPoster(src) : undefined);
 
   // Detect slow connection or reduced motion
   const slowConnection = isSlowConnection();
@@ -111,16 +124,22 @@ export const LazyVideo = memo(({
       ref={containerRef}
       className={cn('relative overflow-hidden bg-muted', className)}
     >
-      {/* Placeholder */}
+      {/* Placeholder with poster */}
       {showPlaceholder && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
-          {poster && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          {effectivePoster ? (
             <img
-              src={poster}
+              src={effectivePoster}
               alt="Video thumbnail"
-              className="w-full h-full object-cover opacity-50"
+              className="w-full h-full object-cover"
               loading="lazy"
+              onError={(e) => {
+                // Hide broken poster
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
             />
+          ) : (
+            <div className="w-full h-full bg-muted animate-pulse" />
           )}
         </div>
       )}
@@ -130,7 +149,7 @@ export const LazyVideo = memo(({
         isStream ? (
           <StreamPlayer
             src={src}
-            poster={poster}
+            poster={effectivePoster}
             className={cn(
               'w-full h-full transition-opacity duration-300',
               isLoaded ? 'opacity-100' : 'opacity-0'
@@ -146,7 +165,7 @@ export const LazyVideo = memo(({
           <video
             ref={videoRef}
             src={src}
-            poster={poster}
+            poster={effectivePoster}
             controls={showControls}
             muted={muted}
             loop={loop}
