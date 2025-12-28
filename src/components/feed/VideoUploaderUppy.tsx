@@ -129,26 +129,27 @@ export const VideoUploaderUppy = ({
           retryDelays: [0, 1000, 3000, 5000, 10000],
           removeFingerprintOnSuccess: true,
           storeFingerprintForResuming: false,
-          // These headers are sent with the initial POST to our backend function
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${accessToken}`,
-            // keep lowercase too for compatibility with some proxies
-            authorization: `Bearer ${accessToken}`,
-          },
-          // Make sure TUS-required header is sent on all requests
+          // IMPORTANT: Do NOT set static headers here.
+          // Uppy/TUS will reuse them for the Cloudflare upload URL (Location), which can trigger CORS/network errors.
+          headers: {},
           onBeforeRequest: (req) => {
+            // TUS required header
             req.setHeader('Tus-Resumable', '1.0.0');
 
             const url = req.getURL();
+
+            // Only attach backend headers when talking to OUR backend function.
+            // Never attach them to the Cloudflare upload URL.
             if (url.includes('/functions/v1/stream-video')) {
               req.setHeader('apikey', SUPABASE_ANON_KEY);
-              req.setHeader('Authorization', `Bearer ${accessToken}`);
-              req.setHeader('authorization', `Bearer ${accessToken}`);
+              // No user auth required for the TUS POST branch; keep requests simple.
+              // (Action-based calls use supabase.functions.invoke which already includes auth.)
             }
 
             if (import.meta.env.DEV) {
-              console.log('[VideoUploaderUppy] TUS request:', req.getMethod(), url);
+              console.log('[VideoUploaderUppy] TUS request:', req.getMethod(), url, {
+                hasApiKey: url.includes('/functions/v1/stream-video'),
+              });
             }
           },
           onAfterResponse: (req, res) => {
