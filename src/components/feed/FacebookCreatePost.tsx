@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadToR2 } from '@/utils/r2Upload';
-import { uploadToStream } from '@/utils/streamUpload';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +24,7 @@ import { ImagePlus, Video, X, Loader2, Globe, Users, Lock, ChevronDown, UserPlus
 import { compressImage, FILE_LIMITS, getVideoDuration } from '@/utils/imageCompression';
 import { EmojiPicker } from './EmojiPicker';
 import { VideoUploadProgress, VideoUploadState } from './VideoUploadProgress';
+import { VideoUploaderUppy } from './VideoUploaderUppy';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 interface FacebookCreatePostProps {
@@ -56,6 +56,12 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [currentVideoName, setCurrentVideoName] = useState('');
   const [currentVideoId, setCurrentVideoId] = useState<string | undefined>(undefined);
+  
+  // Uppy video upload state
+  const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
+  const [uppyVideoResult, setUppyVideoResult] = useState<{ uid: string; url: string } | null>(null);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  
   // Enhanced upload progress state
   const [uploadDetails, setUploadDetails] = useState({
     bytesUploaded: 0,
@@ -136,6 +142,12 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
             toast.error(`Video "${file.name}" phải ngắn hơn 15 phút`);
             continue;
           }
+          // Use Uppy for video uploads - set pending file and start upload
+          setPendingVideoFile(file);
+          setCurrentVideoName(file.name);
+          setIsVideoUploading(true);
+          setShowMediaUpload(true);
+          continue; // Don't add to mediaItems - Uppy handles it
         }
 
         let processedFile = file;
@@ -157,8 +169,10 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       }
     }
 
-    setMediaItems((prev) => [...prev, ...newMediaItems]);
-    setShowMediaUpload(true);
+    if (newMediaItems.length > 0) {
+      setMediaItems((prev) => [...prev, ...newMediaItems]);
+      setShowMediaUpload(true);
+    }
   };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -191,8 +205,14 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && mediaItems.length === 0) {
+    if (!content.trim() && mediaItems.length === 0 && !uppyVideoResult) {
       toast.error('Vui lòng thêm nội dung hoặc media');
+      return;
+    }
+
+    // Check if video is still uploading
+    if (isVideoUploading) {
+      toast.error('Vui lòng đợi video upload xong');
       return;
     }
 
@@ -208,64 +228,21 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Chưa đăng nhập');
 
-      // Upload all media items
+      // Upload all media items (images only - videos handled by Uppy)
       const mediaUrls: Array<{ url: string; type: 'image' | 'video' }> = [];
+      
+      // Add Uppy-uploaded video first if exists
+      if (uppyVideoResult) {
+        mediaUrls.push({
+          url: uppyVideoResult.url,
+          type: 'video',
+        });
+      }
       
       for (const item of mediaItems) {
         if (item.type === 'video') {
-          // Use Cloudflare Stream for videos
-          setCurrentVideoName(item.file.name);
-          setVideoUploadState('uploading');
-          setVideoUploadProgress(0);
-
-          try {
-            const result = await uploadToStream(
-              item.file,
-              (progress) => {
-                // Update state based on whether we're uploading or processing
-                if (progress.processingState) {
-                  setVideoUploadState('processing');
-                  setUploadDetails(prev => ({
-                    ...prev,
-                    processingState: progress.processingState,
-                    processingProgress: progress.processingProgress,
-                  }));
-                } else {
-                  setVideoUploadProgress(progress.percentage);
-                  setUploadDetails({
-                    bytesUploaded: progress.bytesUploaded,
-                    bytesTotal: progress.bytesTotal,
-                    uploadSpeed: progress.uploadSpeed || 0,
-                    eta: progress.eta || 0,
-                    processingState: undefined,
-                    processingProgress: undefined,
-                  });
-                }
-              },
-              (error) => {
-                console.error('Stream upload error:', error);
-              }
-            );
-
-            setVideoUploadState('processing');
-            setCurrentVideoId(result.uid); // Store video ID for thumbnail preview
-            
-            // Use Cloudflare Stream iframe embed URL (more reliable than HLS manifest)
-            // Format: https://iframe.videodelivery.net/{uid}
-            const streamUrl = `https://iframe.videodelivery.net/${result.uid}`;
-            mediaUrls.push({
-              url: streamUrl,
-              type: 'video',
-            });
-
-            setVideoUploadState('ready');
-            toast.success('Video đã tải lên thành công!');
-           } catch (error: any) {
-             console.error('Stream upload failed:', error);
-             setVideoUploadState('error');
-             toast.error(`Không thể tải video lên: ${error.message || 'Vui lòng thử lại'}`);
-             throw error; // Stop post creation when video upload fails
-           }
+          // Skip videos - they're handled by Uppy component now
+          continue;
         } else {
           // Use R2 for images
           const result = await uploadToR2(item.file, 'posts');
@@ -280,6 +257,8 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       setVideoUploadState('idle');
       setVideoUploadProgress(0);
       setCurrentVideoId(undefined);
+      setPendingVideoFile(null);
+      setUppyVideoResult(null);
 
       // For backward compatibility, also set first image/video in legacy fields
       const firstImage = mediaUrls.find((m) => m.type === 'image');
@@ -523,19 +502,26 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
                       </div>
                     )}
 
-                    {/* Video Upload Progress */}
-                    {videoUploadState !== 'idle' && (
-                      <VideoUploadProgress
-                        state={videoUploadState}
-                        progress={videoUploadProgress}
-                        fileName={currentVideoName}
-                        bytesUploaded={uploadDetails.bytesUploaded}
-                        bytesTotal={uploadDetails.bytesTotal}
-                        uploadSpeed={uploadDetails.uploadSpeed}
-                        eta={uploadDetails.eta}
-                        processingState={uploadDetails.processingState}
-                        processingProgress={uploadDetails.processingProgress}
-                        videoId={currentVideoId}
+                    {/* Uppy Video Uploader */}
+                    {pendingVideoFile && (
+                      <VideoUploaderUppy
+                        selectedFile={pendingVideoFile}
+                        onUploadComplete={(result) => {
+                          setUppyVideoResult(result);
+                          setIsVideoUploading(false);
+                          setPendingVideoFile(null);
+                        }}
+                        onUploadError={() => {
+                          setIsVideoUploading(false);
+                          setPendingVideoFile(null);
+                        }}
+                        onUploadStart={() => setIsVideoUploading(true)}
+                        onRemove={() => {
+                          setPendingVideoFile(null);
+                          setUppyVideoResult(null);
+                          setIsVideoUploading(false);
+                        }}
+                        disabled={loading}
                       />
                     )}
                   </div>
