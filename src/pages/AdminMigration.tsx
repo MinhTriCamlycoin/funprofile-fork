@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Database, CheckCircle, XCircle, AlertTriangle, SkipForward, StopCircle, Wrench, Trash2 } from 'lucide-react';
+import { Loader2, Database, CheckCircle, XCircle, AlertTriangle, SkipForward, StopCircle, Wrench, Trash2, Video } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MigrationResult {
@@ -35,6 +35,16 @@ interface CleanupResult {
   }>;
 }
 
+interface OrphanVideoResult {
+  totalVideosOnStream: number;
+  totalVideosInDb: number;
+  orphanVideosFound: number;
+  orphanVideosDeleted: number;
+  errors: string[];
+  deletedUids: string[];
+  dryRun: boolean;
+}
+
 const AdminMigration = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -48,6 +58,8 @@ const AdminMigration = () => {
   const [result, setResult] = useState<MigrationResult | null>(null);
   const [fixUrlResult, setFixUrlResult] = useState<FixUrlResult | null>(null);
   const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null);
+  const [cleaningOrphanVideos, setCleaningOrphanVideos] = useState(false);
+  const [orphanVideoResult, setOrphanVideoResult] = useState<OrphanVideoResult | null>(null);
   
   // Skip/Stop controls
   const skipCurrentRef = useRef(false);
@@ -683,6 +695,53 @@ const AdminMigration = () => {
     }
   };
 
+  const runCleanupOrphanVideos = async (dryRun: boolean = true) => {
+    setCleaningOrphanVideos(true);
+    setOrphanVideoResult(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Phiên đăng nhập hết hạn');
+        return;
+      }
+
+      toast.info(dryRun ? '🔍 Đang quét video orphan (preview)...' : '🗑️ Đang xóa video orphan...');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cleanup-orphan-videos`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ dryRun, maxDelete: 100 }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to cleanup orphan videos');
+      }
+
+      const data: OrphanVideoResult = await response.json();
+      setOrphanVideoResult(data);
+
+      if (dryRun) {
+        toast.info(`🔍 Tìm thấy ${data.orphanVideosFound} video orphan trên ${data.totalVideosOnStream} video`);
+      } else {
+        toast.success(`✅ Đã xóa ${data.orphanVideosDeleted} video orphan!`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Orphan video cleanup error:', error);
+      toast.error(`❌ Lỗi: ${errorMessage}`);
+    } finally {
+      setCleaningOrphanVideos(false);
+    }
+  };
+
   const runMigration = async () => {
     setMigrating(true);
     setProgress(0);
@@ -1191,6 +1250,145 @@ const AdminMigration = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cleanup Orphan Videos Card */}
+          <Card className="border-2 border-purple-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="w-5 h-5 text-purple-500" />
+                🎬 Dọn dẹp Video Orphan (Cloudflare Stream)
+              </CardTitle>
+              <CardDescription>
+                Xóa video trên Cloudflare Stream không còn được tham chiếu trong database
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-purple-50 rounded-lg p-4 space-y-2">
+                <h4 className="font-medium text-purple-700">🔍 Chức năng:</h4>
+                <ul className="text-sm text-purple-600 space-y-1">
+                  <li>✅ Quét tất cả video trên Cloudflare Stream</li>
+                  <li>✅ So sánh với video URLs trong database (posts, comments, profiles)</li>
+                  <li>✅ Xóa video không còn được sử dụng (orphan)</li>
+                  <li>✅ Tiết kiệm dung lượng và chi phí Cloudflare Stream</li>
+                </ul>
+              </div>
+
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700">
+                  <strong>💡 Khuyến nghị:</strong> Chạy Preview trước để xem số lượng video orphan
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => runCleanupOrphanVideos(true)}
+                  disabled={cleaningOrphanVideos || migrating || repairing}
+                  className="flex-1"
+                  variant="outline"
+                  size="lg"
+                >
+                  {cleaningOrphanVideos ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang quét...
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-4 h-4 mr-2" />
+                      🔍 Kiểm tra (Preview)
+                    </>
+                  )}
+                </Button>
+
+                <Button 
+                  onClick={() => {
+                    if (window.confirm('⚠️ XÓA TẤT CẢ VIDEO ORPHAN?\n\nHành động này không thể hoàn tác!\n\nNhấn OK để tiếp tục.')) {
+                      runCleanupOrphanVideos(false);
+                    }
+                  }}
+                  disabled={cleaningOrphanVideos || migrating || repairing}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                  size="lg"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  🗑️ Xóa Orphan Videos
+                </Button>
+              </div>
+
+              {orphanVideoResult && (
+                <div className="space-y-3 mt-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-center">
+                      <div className="text-lg font-bold text-blue-600">{orphanVideoResult.totalVideosOnStream}</div>
+                      <div className="text-xs text-muted-foreground">Videos trên CF</div>
+                    </div>
+                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-center">
+                      <div className="text-lg font-bold text-green-600">{orphanVideoResult.totalVideosInDb}</div>
+                      <div className="text-xs text-muted-foreground">Videos trong DB</div>
+                    </div>
+                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center">
+                      <div className="text-lg font-bold text-yellow-600">{orphanVideoResult.orphanVideosFound}</div>
+                      <div className="text-xs text-muted-foreground">Orphan tìm thấy</div>
+                    </div>
+                    <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg text-center">
+                      <div className="text-lg font-bold text-purple-600 flex items-center justify-center gap-1">
+                        {orphanVideoResult.dryRun ? '—' : orphanVideoResult.orphanVideosDeleted}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Đã xóa</div>
+                    </div>
+                  </div>
+
+                  {orphanVideoResult.dryRun && orphanVideoResult.orphanVideosFound > 0 && (
+                    <Alert className="bg-purple-50 border-purple-200">
+                      <Video className="h-4 w-4 text-purple-600" />
+                      <AlertDescription className="text-purple-700">
+                        🔍 <strong>Preview:</strong> Tìm thấy {orphanVideoResult.orphanVideosFound} video orphan có thể xóa
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {!orphanVideoResult.dryRun && (
+                    <Alert className="bg-green-50 border-green-200">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-700">
+                        ✅ Đã xóa {orphanVideoResult.orphanVideosDeleted} video orphan!
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {orphanVideoResult.errors.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-red-600 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        Lỗi ({orphanVideoResult.errors.length}):
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {orphanVideoResult.errors.map((err, idx) => (
+                          <div key={idx} className="text-xs bg-red-50 p-2 rounded border border-red-200 text-red-700">
+                            {err}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {orphanVideoResult.deletedUids.length > 0 && orphanVideoResult.deletedUids.length <= 10 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-purple-600 text-sm">
+                        {orphanVideoResult.dryRun ? 'Video UIDs sẽ xóa:' : 'Video UIDs đã xóa:'}
+                      </h4>
+                      <div className="text-xs font-mono bg-gray-50 p-2 rounded space-y-1 max-h-24 overflow-y-auto">
+                        {orphanVideoResult.deletedUids.map((uid, idx) => (
+                          <div key={idx} className="text-gray-600">{uid}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
