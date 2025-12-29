@@ -8,12 +8,29 @@ import { CommentMediaViewer } from './CommentMediaViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { extractStreamUid, isStreamUrl } from '@/utils/streamUpload';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+// Helper to delete Cloudflare Stream video
+const deleteStreamVideo = async (videoUrl: string): Promise<void> => {
+  const uid = extractStreamUid(videoUrl);
+  if (!uid) return;
+  
+  try {
+    console.log('[CommentItem] Deleting Stream video:', uid);
+    await supabase.functions.invoke('stream-video', {
+      body: { action: 'delete', uid },
+    });
+    console.log('[CommentItem] Stream video deleted:', uid);
+  } catch (error) {
+    console.error('[CommentItem] Failed to delete Stream video:', error);
+  }
+};
 
 interface Comment {
   id: string;
@@ -70,6 +87,12 @@ export const CommentItem = ({
     if (!confirm('Xóa comment này?')) return;
 
     setDeleting(true);
+    
+    // Delete video from Cloudflare Stream first if exists
+    if (comment.video_url && isStreamUrl(comment.video_url)) {
+      await deleteStreamVideo(comment.video_url);
+    }
+    
     const { error } = await supabase
       .from('comments')
       .delete()
