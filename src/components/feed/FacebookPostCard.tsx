@@ -18,6 +18,7 @@ import { ReactionButton } from './ReactionButton';
 import { ReactionSummary } from './ReactionSummary';
 import { MediaGrid } from './MediaGrid';
 import { ExpandableContent } from './ExpandableContent';
+import { extractStreamUid, isStreamUrl } from '@/utils/streamUpload';
 import {
   MessageCircle,
   Share2,
@@ -28,6 +29,23 @@ import {
   Link2,
   Bookmark,
 } from 'lucide-react';
+
+// Helper to delete Cloudflare Stream video
+const deleteStreamVideo = async (videoUrl: string): Promise<void> => {
+  const uid = extractStreamUid(videoUrl);
+  if (!uid) return;
+  
+  try {
+    console.log('[FacebookPostCard] Deleting Stream video:', uid);
+    await supabase.functions.invoke('stream-video', {
+      body: { action: 'delete', uid },
+    });
+    console.log('[FacebookPostCard] Stream video deleted:', uid);
+  } catch (error) {
+    console.error('[FacebookPostCard] Failed to delete Stream video:', error);
+    // Don't throw - post deletion should still proceed
+  }
+};
 
 interface PostStats {
   reactions: { id: string; user_id: string; type: string }[];
@@ -198,11 +216,36 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
 
   const handleDelete = async () => {
     try {
+      // Delete videos from Cloudflare Stream first
+      const videoUrls: string[] = [];
+      
+      // Check legacy video_url
+      if (post.video_url && isStreamUrl(post.video_url)) {
+        videoUrls.push(post.video_url);
+      }
+      
+      // Check media_urls for videos
+      if (post.media_urls && Array.isArray(post.media_urls)) {
+        post.media_urls.forEach((media) => {
+          if (media.type === 'video' && isStreamUrl(media.url)) {
+            videoUrls.push(media.url);
+          }
+        });
+      }
+      
+      // Delete all videos from CF Stream (in parallel)
+      if (videoUrls.length > 0) {
+        console.log('[FacebookPostCard] Deleting', videoUrls.length, 'videos from CF Stream');
+        await Promise.all(videoUrls.map(deleteStreamVideo));
+      }
+      
+      // Now delete the post from database
       const { error } = await supabase.from('posts').delete().eq('id', post.id);
       if (error) throw error;
       toast.success('Đã xóa bài viết');
       onPostDeleted();
     } catch (error: any) {
+      console.error('[FacebookPostCard] Delete error:', error);
       toast.error('Không thể xóa bài viết');
     }
   };
