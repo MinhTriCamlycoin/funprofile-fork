@@ -88,7 +88,9 @@ export const translations = {
     homeFeed: 'Home Feed',
     
     // Right Sidebar
-    honorBoard: 'TOP RANKING',
+    honorBoard: 'Honor Board',
+    topRanking: 'Top Ranking',
+    appWideStats: 'App-wide Statistics',
     walletStatus: 'Wallet Status',
     sponsored: 'Sponsored',
     contacts: 'Contacts',
@@ -200,9 +202,11 @@ export const translations = {
     achievements: 'ACHIEVEMENTS 🏆',
     totalUsers: 'Total Users',
     totalPosts: 'Total Posts',
+    totalPhotos: 'Total Photos',
     totalImages: 'Total Images',
     totalVideos: 'Total Videos',
     totalRewards: 'Total Rewards',
+    totalMoney: 'Total Money',
     moneyCirculated: 'Money Circulated',
     rank: 'Rank',
     user: 'User',
@@ -336,7 +340,9 @@ export const translations = {
     homeFeed: 'Trang chính',
     
     // Right Sidebar
-    honorBoard: 'TOP RANKING',
+    honorBoard: 'Bảng Danh Dự',
+    topRanking: 'Top Ranking',
+    appWideStats: 'Thống kê toàn App',
     walletStatus: 'Tình Trạng Ví',
     sponsored: 'Được tài trợ',
     contacts: 'Liên hệ',
@@ -446,11 +452,13 @@ export const translations = {
     
     // Honor Board / Leaderboard
     achievements: 'THÀNH TÍCH 🏆',
-    totalUsers: 'Tổng người dùng',
-    totalPosts: 'Tổng bài viết',
+    totalUsers: 'Tổng Thành Viên',
+    totalPosts: 'Tổng Bài Viết',
+    totalPhotos: 'Tổng Hình Ảnh',
     totalImages: 'Tổng hình ảnh',
-    totalVideos: 'Tổng video',
-    totalRewards: 'Tổng thưởng',
+    totalVideos: 'Tổng Video',
+    totalRewards: 'Tổng Phần Thưởng',
+    totalMoney: 'Tổng Tiền Lưu Thông',
     moneyCirculated: 'Tiền lưu thông',
     rank: 'Hạng',
     user: 'Người dùng',

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Video, Search, MoreHorizontal, Trophy, ChevronRight } from 'lucide-react';
+import { AppHonorBoard } from './AppHonorBoard';
 
 interface TopUser {
   id: string;
@@ -28,7 +29,8 @@ export const FacebookRightSidebar = memo(() => {
 
   const fetchTopUsers = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_user_rewards', { limit_count: 10 });
+      // Limit to Top 5 users only
+      const { data, error } = await supabase.rpc('get_user_rewards', { limit_count: 5 });
       
       if (error) throw error;
       
@@ -74,12 +76,15 @@ export const FacebookRightSidebar = memo(() => {
 
   return (
     <div className="space-y-4">
-      {/* Honor Board */}
+      {/* App-wide Honor Board (Statistics) */}
+      <AppHonorBoard />
+
+      {/* Top Ranking - Top 5 Users */}
       <div className="fb-card p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-gold" />
-            <h3 className="font-bold text-lg">{t('honorBoard')}</h3>
+            <h3 className="font-bold text-lg">{t('topRanking')}</h3>
           </div>
           <button
             onClick={() => navigate('/leaderboard')}
