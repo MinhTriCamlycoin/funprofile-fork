@@ -47,3 +47,6 @@ verify_jwt = true
 
 [functions.cleanup-orphan-videos]
 verify_jwt = true
+
+[functions.cleanup-stream-videos]
+verify_jwt = true

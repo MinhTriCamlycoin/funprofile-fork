@@ -62,19 +62,23 @@ serve(async (req) => {
       // GET TUS UPLOAD URL - Direct Creator Upload
       // ============================================
       case 'get-tus-upload-url': {
-        const { fileSize, fileName, fileType } = body;
+        const { fileSize, fileName, fileType, fileId } = body;
         
         if (!fileSize || fileSize <= 0) {
           throw new Error('Invalid file size');
         }
 
+        // Log with file identifier to track duplicate requests
         console.log('[stream-video] Creating Direct Creator Upload URL:', {
           fileSize,
           fileName,
           fileType,
+          fileId: fileId || 'not-provided',
+          userId: user.id,
+          timestamp: new Date().toISOString(),
         });
 
-        // Build upload metadata
+        // Build upload metadata with user ID and file ID for tracking
         const metadata = [
           `maxDurationSeconds ${btoa('1800')}`,
           `requiresignedurls ${btoa('false')}`,
@@ -83,6 +87,7 @@ serve(async (req) => {
 
         // Call Cloudflare Stream API with direct_user=true
         // This returns a Direct Upload URL that the client can use directly
+        console.log('[stream-video] Calling Cloudflare API...');
         const response = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream?direct_user=true`,
           {
@@ -111,6 +116,7 @@ serve(async (req) => {
         console.log('[stream-video] Got Direct Upload URL:', {
           uploadUrl: uploadUrl?.substring(0, 80),
           uid: streamMediaId,
+          fileId: fileId || 'not-provided',
         });
 
         if (!uploadUrl) {
