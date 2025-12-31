@@ -105,14 +105,14 @@ const coverTemplates = [
     name: 'Autumn Forest',
     nameVi: 'Rừng mùa thu',
     url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1920&h=1080&fit=crop',
-    thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=225&fit=crop'
+    thumbnail: 'https://images.unsplash.com/photo-1476820865390-c52aeebb9891?w=400&h=225&fit=crop'
   },
   {
-    id: 'rice-terrace',
-    name: 'Rice Terrace',
-    nameVi: 'Ruộng bậc thang',
-    url: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1920&h=1080&fit=crop',
-    thumbnail: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=225&fit=crop'
+    id: 'sea-bay',
+    name: 'Sea Bay',
+    nameVi: 'Vịnh biển',
+    url: 'https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=1920&h=1080&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=400&h=225&fit=crop'
   },
   {
     id: 'coral-reef',
