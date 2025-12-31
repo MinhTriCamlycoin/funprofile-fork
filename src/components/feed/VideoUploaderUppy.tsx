@@ -109,7 +109,11 @@ export const VideoUploaderUppy = ({
   const lastTimeRef = useRef(Date.now());
   const isUploadingRef = useRef(false);
   const localThumbnailRef = useRef<string | undefined>(undefined);
-  const completedRef = useRef(false); // Track if upload was completed successfully
+  const completedRef = useRef(false);
+  
+  // Track the file being uploaded to prevent duplicate uploads
+  const currentFileRef = useRef<string | null>(null);
+  const uploadStartedRef = useRef(false);
 
   // Cleanup on unmount - delete orphan video if upload wasn't completed
   useEffect(() => {
@@ -119,9 +123,9 @@ export const VideoUploaderUppy = ({
         tusUploadRef.current = null;
       }
       
-      // If we have a video UID but upload wasn't "completed" (user cancelled/navigated away)
-      // Clean it up to prevent orphan videos
-      // Note: completedRef tracks if onUploadComplete was called
+      // Reset refs on unmount
+      currentFileRef.current = null;
+      uploadStartedRef.current = false;
     };
   }, []);
 
@@ -143,7 +147,34 @@ export const VideoUploaderUppy = ({
   useEffect(() => {
     if (!selectedFile) return;
 
+    // Generate a unique file identifier to prevent duplicate uploads
+    const fileId = `${selectedFile.name}_${selectedFile.size}_${selectedFile.lastModified}`;
+    
+    // Prevent duplicate upload for the same file
+    if (currentFileRef.current === fileId && uploadStartedRef.current) {
+      console.log('[VideoUploader] Upload already started for this file, skipping duplicate');
+      return;
+    }
+    
+    // If already uploading a different file, abort first
+    if (tusUploadRef.current && currentFileRef.current !== fileId) {
+      console.log('[VideoUploader] Aborting previous upload to start new one');
+      tusUploadRef.current.abort();
+      tusUploadRef.current = null;
+      isUploadingRef.current = false;
+    }
+
     const startUpload = async () => {
+      // Double-check to prevent race conditions
+      if (uploadStartedRef.current && currentFileRef.current === fileId) {
+        console.log('[VideoUploader] Upload already in progress for this file');
+        return;
+      }
+      
+      // Mark this file as being uploaded
+      currentFileRef.current = fileId;
+      uploadStartedRef.current = true;
+      
       try {
         isUploadingRef.current = true;
         
@@ -157,7 +188,7 @@ export const VideoUploaderUppy = ({
 
         onUploadStart?.();
 
-        console.log('[VideoUploader] Starting upload, file size:', selectedFile.size);
+        console.log('[VideoUploader] Starting upload, file:', fileId);
 
         // Generate local thumbnail immediately (don't await - run in parallel)
         generateVideoThumbnail(selectedFile)
@@ -170,13 +201,15 @@ export const VideoUploaderUppy = ({
             console.warn('[VideoUploader] Failed to generate local thumbnail:', err);
           });
 
-        // Step 1: Get Direct Upload URL from our backend
+        // Step 1: Get Direct Upload URL from our backend (ONLY ONCE)
+        console.log('[VideoUploader] Requesting upload URL from backend...');
         const { data, error } = await supabase.functions.invoke('stream-video', {
           body: {
             action: 'get-tus-upload-url',
             fileSize: selectedFile.size,
             fileName: selectedFile.name,
             fileType: selectedFile.type,
+            fileId, // Send file identifier for deduplication tracking
           },
         });
 
@@ -305,6 +338,8 @@ export const VideoUploaderUppy = ({
       } catch (error) {
         console.error('[VideoUploader] Error:', error);
         isUploadingRef.current = false;
+        uploadStartedRef.current = false; // Allow retry
+        currentFileRef.current = null;
 
         const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
         setUploadState(prev => ({
@@ -328,6 +363,8 @@ export const VideoUploaderUppy = ({
       tusUploadRef.current = null;
     }
     isUploadingRef.current = false;
+    uploadStartedRef.current = false; // Allow new upload
+    currentFileRef.current = null;
     
     // Clean up any partially uploaded video from Cloudflare Stream
     const uidToDelete = uploadState.videoUid;
