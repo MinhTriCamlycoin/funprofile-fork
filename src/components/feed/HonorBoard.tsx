@@ -25,7 +25,7 @@ export const HonorBoard = memo(() => {
   // Optimized: Single RPC call instead of N+1 queries
   const fetchLeaderboards = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_user_rewards', { limit_count: 5 });
+      const { data, error } = await supabase.rpc('get_user_rewards', { limit_count: 6 });
       
       if (error) throw error;
 
@@ -59,18 +59,18 @@ export const HonorBoard = memo(() => {
   const UserRow = ({ user, rank }: { user: LeaderboardUser; rank: number }) => (
     <div 
       onClick={() => handleUserClick(user.id)}
-      className="relative border-2 border-gold rounded-lg p-2 bg-white/90 hover:bg-white transition-all cursor-pointer"
+      className="relative border-b border-gold/30 last:border-b-0 py-2 first:pt-0 last:pb-0 bg-white/90 hover:bg-gold/5 transition-all cursor-pointer"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-gold font-bold text-lg w-6">{rank}</span>
-          <Avatar className="w-6 h-6 border-2 border-gold">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-3">
+          <span className="text-gold font-bold text-lg w-5 text-center">{rank}</span>
+          <Avatar className="w-8 h-8 border-2 border-gold">
             <AvatarImage src={user.avatar_url} />
             <AvatarFallback className="text-xs bg-gold/20 text-primary">
               {user.username?.[0]?.toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-primary text-sm font-medium">{user.username}</span>
+          <span className="text-primary text-sm font-medium truncate max-w-[120px]">{user.username}</span>
         </div>
         <span className="text-gold font-bold text-sm">{user.total_reward.toLocaleString('vi-VN')}</span>
       </div>
@@ -105,11 +105,11 @@ export const HonorBoard = memo(() => {
           <h1 className="text-gold text-xl font-black tracking-wider drop-shadow-lg">
             HONOR BOARD
           </h1>
-          <p className="text-gold text-xs font-medium">TOP 5 TOTAL REWARD</p>
+          <p className="text-gold text-xs font-medium">TOP 6 TOTAL REWARD</p>
         </div>
 
-        {/* Top 5 Users */}
-        <div className="space-y-2">
+        {/* Top 6 Users - Single column layout */}
+        <div className="grid grid-cols-1 gap-0 rounded-lg border border-gold/20 overflow-hidden">
           {topRewards.map((user, index) => (
             <UserRow key={user.id} user={user} rank={index + 1} />
           ))}
