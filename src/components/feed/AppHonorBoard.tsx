@@ -23,44 +23,32 @@ interface AppStats {
   totalRewards: number;
   totalMoneyUsd: number;
 }
+
 export const AppHonorBoard = memo(() => {
-  const {
-    t
-  } = useLanguage();
-  const {
-    data: stats,
-    isLoading
-  } = useQuery({
+  const { t } = useLanguage();
+  
+  const { data: stats, isLoading } = useQuery({
     queryKey: ['app-honor-board-stats'],
     queryFn: async (): Promise<AppStats> => {
-      // Fetch all stats and token prices in parallel
+      // Fetch all stats in parallel - use get_user_rewards RPC for consistent calculation
       const [
         usersResult, 
         postsResult, 
         rewardClaimsResult, 
         transactionsResult,
-        reactionsResult,
-        commentsResult,
-        friendshipsResult,
-        sharesResult,
+        userRewardsResult,
         pricesResponse
       ] = await Promise.all([
         // Total users
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         // Posts with media counts
-        supabase.from('posts').select('id, user_id, image_url, video_url, media_urls'),
+        supabase.from('posts').select('id, image_url, video_url, media_urls'),
         // All claimed rewards (CAMLY token)
         supabase.from('reward_claims').select('amount'),
         // All transactions with token info
         supabase.from('transactions').select('amount, token_symbol'),
-        // All reactions for calculating claimable rewards
-        supabase.from('reactions').select('post_id'),
-        // All comments for calculating claimable rewards  
-        supabase.from('comments').select('post_id'),
-        // All friendships for calculating claimable rewards
-        supabase.from('friendships').select('user_id, friend_id, status'),
-        // All shares for calculating claimable rewards
-        supabase.from('shared_posts').select('original_post_id'),
+        // Use the same RPC function as Leaderboard & TopRanking for consistent rewards
+        supabase.rpc('get_user_rewards', { limit_count: 10000 }),
         // Fetch token prices from CoinGecko
         fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${Object.values(COINGECKO_IDS).join(',')}&vs_currencies=usd`)
           .then(res => res.ok ? res.json() : null)
@@ -92,67 +80,17 @@ export const AppHonorBoard = memo(() => {
         }
       });
 
-      // Calculate total rewards using the same formula as useRewardCalculation
-      // For each user: postsReward + reactionsReward + commentsReward + sharesReward + friendsReward + newUserBonus
-      const reactions = reactionsResult.data || [];
-      const comments = commentsResult.data || [];
-      const friendships = friendshipsResult.data || [];
-      const shares = sharesResult.data || [];
-      const claims = rewardClaimsResult.data || [];
-
-      // Group data by user for calculation
-      const userPostIds = new Map<string, string[]>();
-      posts.forEach(post => {
-        const existing = userPostIds.get(post.user_id) || [];
-        existing.push(post.id);
-        userPostIds.set(post.user_id, existing);
-      });
-
-      let totalRewards = 0;
-      
-      // For each user, calculate their total reward
-      const uniqueUserIds = new Set<string>();
-      posts.forEach(p => uniqueUserIds.add(p.user_id));
-      friendships.forEach(f => {
-        if (f.status === 'accepted') {
-          uniqueUserIds.add(f.user_id);
-          uniqueUserIds.add(f.friend_id);
-        }
-      });
-
-      uniqueUserIds.forEach(userId => {
-        const userPostIdList = userPostIds.get(userId) || [];
-        const postsCount = userPostIdList.length;
-        
-        // Count reactions on user's posts
-        const reactionsOnPosts = reactions.filter(r => userPostIdList.includes(r.post_id)).length;
-        
-        // Count comments on user's posts
-        const commentsOnPosts = comments.filter(c => userPostIdList.includes(c.post_id)).length;
-        
-        // Count shares of user's posts
-        const sharesCount = shares.filter(s => userPostIdList.includes(s.original_post_id)).length;
-        
-        // Count friends
-        const friendsCount = friendships.filter(
-          f => f.status === 'accepted' && (f.user_id === userId || f.friend_id === userId)
-        ).length;
-
-        // Calculate reward using the same formula
-        const postsReward = postsCount * 20000;
-        let reactionsReward = 0;
-        if (reactionsOnPosts >= 3) {
-          reactionsReward = 30000 + (reactionsOnPosts - 3) * 1000;
-        }
-        const commentsReward = commentsOnPosts * 5000;
-        const sharesReward = sharesCount * 5000;
-        const friendsReward = friendsCount * 10000 + 10000; // +10k new user bonus
-
-        totalRewards += postsReward + reactionsReward + commentsReward + sharesReward + friendsReward;
-      });
+      // Calculate total rewards using the same RPC function as Leaderboard
+      // This ensures consistency across all components
+      const userRewards = userRewardsResult.data || [];
+      const totalRewards = userRewards.reduce(
+        (sum: number, user: { total_reward: number }) => sum + (Number(user.total_reward) || 0), 
+        0
+      );
 
       // Calculate total money in USD
       // 1. Sum claimed rewards (CAMLY) and convert to USD
+      const claims = rewardClaimsResult.data || [];
       const claimedCamly = claims.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
       const claimedUsd = claimedCamly * tokenPrices.CAMLY;
 
@@ -184,10 +122,8 @@ export const AppHonorBoard = memo(() => {
         totalMoneyUsd
       };
     },
-    staleTime: 5 * 60 * 1000,
-    // 5 minutes
-    gcTime: 10 * 60 * 1000,
-    // 10 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false
   });
   if (isLoading) {

@@ -42,52 +42,29 @@ export const calculateReward = (
 };
 
 /**
- * Fetch reward stats for a user - optimized with batched queries
+ * Fetch reward stats for a user - uses RPC function for consistency with Leaderboard
  */
 const fetchRewardStats = async (userId: string): Promise<UserRewardStats> => {
-  // Fetch user's posts
-  const { data: postsData } = await supabase
-    .from('posts')
-    .select('id')
-    .eq('user_id', userId);
-  
-  const postsCount = postsData?.length || 0;
-  const postIds = postsData?.map(p => p.id) || [];
-  
-  // Batch queries for reactions, comments, shares on user's posts
-  let reactionsOnPosts = 0;
-  let commentsOnPosts = 0;
-  let sharesCount = 0;
-  
-  if (postIds.length > 0) {
-    const [reactionsRes, commentsRes, sharesRes] = await Promise.all([
-      supabase.from('reactions').select('id', { count: 'exact', head: true }).in('post_id', postIds),
-      supabase.from('comments').select('id', { count: 'exact', head: true }).in('post_id', postIds),
-      supabase.from('shared_posts').select('id', { count: 'exact', head: true }).in('original_post_id', postIds)
-    ]);
-    
-    reactionsOnPosts = reactionsRes.count || 0;
-    commentsOnPosts = commentsRes.count || 0;
-    sharesCount = sharesRes.count || 0;
-  }
-  
-  // Fetch friends and claims in parallel
-  const [friendsRes, claimsRes] = await Promise.all([
-    supabase
-      .from('friendships')
-      .select('id', { count: 'exact', head: true })
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
-      .eq('status', 'accepted'),
+  // Use RPC function to get consistent reward calculation with Leaderboard
+  const [userRewardsRes, claimsRes] = await Promise.all([
+    supabase.rpc('get_user_rewards', { limit_count: 10000 }),
     supabase
       .from('reward_claims')
       .select('amount')
       .eq('user_id', userId)
   ]);
+
+  // Find the current user's data from RPC result
+  const userData = userRewardsRes.data?.find((u: any) => u.id === userId);
   
-  const friendsCount = friendsRes.count || 0;
+  const postsCount = Number(userData?.posts_count) || 0;
+  const reactionsOnPosts = Number(userData?.reactions_on_posts) || 0;
+  const commentsOnPosts = Number(userData?.comments_count) || 0;
+  const sharesCount = Number(userData?.shares_count) || 0;
+  const friendsCount = Number(userData?.friends_count) || 0;
+  const totalReward = Number(userData?.total_reward) || 0;
+  
   const claimedAmount = claimsRes.data?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
-  
-  const totalReward = calculateReward(postsCount, reactionsOnPosts, commentsOnPosts, sharesCount, friendsCount);
   const claimableAmount = Math.max(0, totalReward - claimedAmount);
   
   return {
