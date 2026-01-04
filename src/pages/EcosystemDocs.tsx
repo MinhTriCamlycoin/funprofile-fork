@@ -89,7 +89,12 @@ const EcosystemDocs: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handlePrint}
+              className="border-primary bg-white text-primary hover:bg-primary/10"
+            >
               <Printer className="h-4 w-4 mr-2" />
               In PDF
             </Button>
