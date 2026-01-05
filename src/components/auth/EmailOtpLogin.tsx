@@ -71,20 +71,25 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
 
       if (error) throw error;
 
-      if (data?.success && data?.magic_link) {
-        // Exchange magic link for session
-        const urlParams = new URL(data.magic_link).hash.substring(1);
-        const params = new URLSearchParams(urlParams);
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
+      if (data?.success && data?.access_token && data?.refresh_token) {
+        // Set session directly from tokens returned by edge function
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
 
-        if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
+        if (sessionError) {
+          console.error('Session set error:', sessionError);
+          throw new Error('Failed to establish session');
         }
 
+        // Verify session is set
+        const { data: sessionCheck } = await supabase.auth.getSession();
+        if (!sessionCheck.session) {
+          throw new Error('Session not established');
+        }
+
+        console.log('[OTP] Session established for user:', data.user_id);
         toast.success(t('welcomeBack'));
         onSuccess(data.user_id, data.is_new_user);
       } else {
