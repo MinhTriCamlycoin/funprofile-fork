@@ -52,7 +52,7 @@ const Auth = () => {
           variant="outline"
           size="sm"
           onClick={() => setAuthMode(authMode === 'unified' ? 'classic' : 'unified')}
-          className="bg-white/80 backdrop-blur-sm border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all"
+          className="bg-white border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition-all"
         >
           {authMode === 'unified' ? (
             <>
