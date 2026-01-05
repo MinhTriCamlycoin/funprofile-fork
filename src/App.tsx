@@ -63,6 +63,8 @@ function App() {
                   <Route path="/friends" element={<Friends />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/profile/:userId" element={<Profile />} />
+                  <Route path="/@:username" element={<Profile />} />
+                  <Route path="/:username" element={<Profile />} />
                   <Route path="/wallet" element={<Wallet />} />
                   <Route path="/post/:postId" element={<Post />} />
                   <Route path="/about" element={<About />} />
