@@ -65,7 +65,6 @@ function App() {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/profile/:userId" element={<Profile />} />
                   <Route path="/@:username" element={<Profile />} />
-                  <Route path="/:username" element={<Profile />} />
                   <Route path="/wallet" element={<Wallet />} />
                   <Route path="/post/:postId" element={<Post />} />
                   <Route path="/about" element={<About />} />
@@ -77,6 +76,8 @@ function App() {
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/docs/*" element={<DocsRouter />} />
                   <Route path="/app-documentation" element={<Navigate to="/docs/app" replace />} />
+                  {/* Dynamic username route - must be AFTER static routes */}
+                  <Route path="/:username" element={<Profile />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </LawOfLightGuard>
