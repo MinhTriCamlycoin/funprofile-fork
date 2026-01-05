@@ -7,20 +7,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiting (resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10; // max requests per wallet per minute
+const RATE_WINDOW = 60 * 1000; // 1 minute in ms
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW });
+    return true;
+  }
+  
+  if (entry.count >= RATE_LIMIT) {
+    return false;
+  }
+  
+  entry.count++;
+  return true;
+}
+
 // Cryptographic signature verification using ethers.js
 function verifySignature(message: string, signature: string, expectedAddress: string): boolean {
   try {
     // Validate signature format (0x + 130 hex chars = 65 bytes)
     const sigRegex = /^0x[a-fA-F0-9]{130}$/;
     if (!sigRegex.test(signature)) {
-      console.error('[WEB3-AUTH] Invalid signature format');
       return false;
     }
 
     // Validate address format
     const addressRegex = /^0x[a-fA-F0-9]{40}$/i;
     if (!addressRegex.test(expectedAddress)) {
-      console.error('[WEB3-AUTH] Invalid address format');
       return false;
     }
 
@@ -28,17 +48,8 @@ function verifySignature(message: string, signature: string, expectedAddress: st
     const recoveredAddress = ethersVerifyMessage(message, signature);
     
     // Compare addresses (case-insensitive)
-    const isValid = recoveredAddress.toLowerCase() === expectedAddress.toLowerCase();
-    
-    if (!isValid) {
-      console.error('[WEB3-AUTH] Signature verification failed: address mismatch');
-      console.log('[WEB3-AUTH] Expected:', expectedAddress.toLowerCase());
-      console.log('[WEB3-AUTH] Recovered:', recoveredAddress.toLowerCase());
-    }
-    
-    return isValid;
-  } catch (error) {
-    console.error('[WEB3-AUTH] Signature verification error:', error);
+    return recoveredAddress.toLowerCase() === expectedAddress.toLowerCase();
+  } catch {
     return false;
   }
 }
@@ -50,13 +61,10 @@ serve(async (req) => {
   }
 
   try {
-    const { wallet_address, signature, message, nonce } = await req.json();
-
-    console.log(`[WEB3-AUTH] Auth request for wallet: ${wallet_address}`);
+    const { wallet_address, signature, message } = await req.json();
 
     // Validate inputs
     if (!wallet_address || !signature || !message) {
-      console.error('[WEB3-AUTH] Missing required fields');
       return new Response(
         JSON.stringify({ success: false, error: 'wallet_address, signature, and message are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -65,16 +73,27 @@ serve(async (req) => {
 
     const normalizedAddress = wallet_address.toLowerCase();
 
+    // Rate limiting by wallet address
+    if (!checkRateLimit(`web3:${normalizedAddress}`)) {
+      console.warn(`[WEB3-AUTH] Rate limit exceeded for: ${normalizedAddress}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Too many requests. Please wait before trying again.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[WEB3-AUTH] Auth request for wallet: ${wallet_address}`);
+
     // Verify signature cryptographically using ethers.js
     if (!verifySignature(message, signature, normalizedAddress)) {
-      console.error('[WEB3-AUTH] Cryptographic signature verification failed');
+      console.warn('[WEB3-AUTH] Signature verification failed');
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid signature' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[WEB3-AUTH] Signature verified successfully');
+    console.log('[WEB3-AUTH] Signature verified');
 
     // Create Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -86,10 +105,10 @@ serve(async (req) => {
       .from('blacklisted_wallets')
       .select('id, reason')
       .eq('wallet_address', normalizedAddress)
-      .single();
+      .maybeSingle();
 
     if (blacklisted) {
-      console.error('[WEB3-AUTH] Wallet is blacklisted:', blacklisted.reason);
+      console.warn('[WEB3-AUTH] Wallet blacklisted:', blacklisted.reason);
       return new Response(
         JSON.stringify({ success: false, error: 'This wallet has been blacklisted' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -101,11 +120,11 @@ serve(async (req) => {
       .from('profiles')
       .select('id, username, wallet_address')
       .eq('wallet_address', normalizedAddress)
-      .single();
+      .maybeSingle();
 
     let userId: string;
     let isNewUser = false;
-    let userEmail: string;
+    let userEmail: string = '';
 
     if (existingProfile) {
       console.log('[WEB3-AUTH] Existing user found:', existingProfile.id);
@@ -115,7 +134,7 @@ serve(async (req) => {
       const { data: userData } = await supabase.auth.admin.getUserById(userId);
       userEmail = userData?.user?.email || '';
     } else {
-      console.log('[WEB3-AUTH] Creating new user for wallet');
+      console.log('[WEB3-AUTH] Creating new user');
       isNewUser = true;
 
       // Generate unique email and username for this wallet user
@@ -171,7 +190,6 @@ serve(async (req) => {
     }
 
     if (!userEmail) {
-      console.error('[WEB3-AUTH] User email not found');
       return new Response(
         JSON.stringify({ success: false, error: 'User email not found' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -184,14 +202,14 @@ serve(async (req) => {
     });
 
     if (sessionError) {
-      console.error('[WEB3-AUTH] Failed to generate session:', sessionError);
+      console.error('[WEB3-AUTH] Session generation failed:', sessionError);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to create session' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[WEB3-AUTH] Authentication successful');
+    console.log('[WEB3-AUTH] Auth successful for:', userId);
 
     return new Response(
       JSON.stringify({

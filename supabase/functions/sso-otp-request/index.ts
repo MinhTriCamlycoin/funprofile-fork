@@ -6,6 +6,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiting (resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 5; // max requests
+const RATE_WINDOW = 60 * 1000; // 1 minute in ms
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW });
+    return true;
+  }
+  
+  if (entry.count >= RATE_LIMIT) {
+    return false;
+  }
+  
+  entry.count++;
+  return true;
+}
+
 // Generate 6-digit OTP
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -20,10 +42,19 @@ serve(async (req) => {
   try {
     const { identifier, type = 'email' } = await req.json();
 
-    console.log(`[OTP-REQUEST] Received request for: ${identifier}, type: ${type}`);
+    // Rate limiting by identifier
+    const rateLimitKey = `otp:${identifier?.toLowerCase() || 'unknown'}`;
+    if (!checkRateLimit(rateLimitKey)) {
+      console.warn(`[OTP-REQUEST] Rate limit exceeded for: ${identifier}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Too many requests. Please wait a minute before trying again.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[OTP-REQUEST] Processing request for: ${identifier}, type: ${type}`);
 
     if (!identifier) {
-      console.error('[OTP-REQUEST] Missing identifier');
       return new Response(
         JSON.stringify({ success: false, error: 'Identifier is required (email or phone)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -34,7 +65,6 @@ serve(async (req) => {
     if (type === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(identifier)) {
-        console.error('[OTP-REQUEST] Invalid email format:', identifier);
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid email format' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -50,9 +80,6 @@ serve(async (req) => {
     // Generate OTP and expiry (5 minutes)
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-    // Note: Do not log OTP values in production for security
-    console.log(`[OTP-REQUEST] Generated OTP for ${identifier}`);
 
     // Delete any existing unused OTP for this identifier
     await supabase
@@ -83,8 +110,6 @@ serve(async (req) => {
     }
 
     // TODO: Integrate with email service (Resend, SendGrid) to send OTP
-    // Example: const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-    // await resend.emails.send({ from: 'noreply@app.com', to: identifier, subject: 'Your OTP', html: `Your code: ${otp}` });
     console.log(`[OTP-REQUEST] OTP stored successfully for ${identifier}`);
     
     return new Response(
@@ -92,8 +117,6 @@ serve(async (req) => {
         success: true,
         message: `OTP sent to ${identifier}`,
         expires_in_seconds: 300
-        // OTP is stored in database and should be sent via email service
-        // Never expose OTP in response for security
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

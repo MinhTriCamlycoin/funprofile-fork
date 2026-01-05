@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,7 +52,7 @@ interface FacebookPostCardProps {
   };
   currentUserId: string;
   onPostDeleted: () => void;
-  initialStats?: PostStats; // Pre-fetched stats from parent
+  initialStats?: PostStats;
 }
 
 interface ReactionCount {
@@ -60,7 +60,7 @@ interface ReactionCount {
   count: number;
 }
 
-export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialStats }: FacebookPostCardProps) => {
+const FacebookPostCardComponent = ({ post, currentUserId, onPostDeleted, initialStats }: FacebookPostCardProps) => {
   const navigate = useNavigate();
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [commentCount, setCommentCount] = useState(initialStats?.commentCount || 0);
@@ -198,40 +198,36 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
     };
   }, [post.id, currentUserId]);
 
-  const handleDelete = async () => {
-    // Prevent multiple clicks
+  const handleDelete = useCallback(async () => {
     if (isDeleting) return;
     setIsDeleting(true);
     
     try {
-      // Extract and delete all Stream videos from this post
       const videoUrls = extractPostStreamVideos(post);
       
       if (videoUrls.length > 0) {
         await deleteStreamVideos(videoUrls);
       }
       
-      // Now delete the post from database
       const { error: deleteError } = await supabase.from('posts').delete().eq('id', post.id);
       if (deleteError) throw deleteError;
       
       toast.success('Đã xóa bài viết');
       onPostDeleted();
     } catch (error: unknown) {
-      console.error('[FacebookPostCard] Delete error:', error);
       toast.error('Không thể xóa bài viết');
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [isDeleting, post, onPostDeleted]);
 
-  const handleCopyLink = () => {
+  const handleCopyLink = useCallback(() => {
     const url = `${window.location.origin}/post/${post.id}`;
     navigator.clipboard.writeText(url);
     toast.success('Đã sao chép link!');
-  };
+  }, [post.id]);
 
-  const handleShareToProfile = async () => {
+  const handleShareToProfile = useCallback(async () => {
     if (!currentUserId) {
       toast.error('Vui lòng đăng nhập để chia sẻ');
       return;
@@ -246,31 +242,52 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
       if (error) throw error;
       setShareCount((prev) => prev + 1);
       toast.success('Đã chia sẻ bài viết!');
-    } catch (error: any) {
+    } catch {
       toast.error('Không thể chia sẻ');
     }
-  };
+  }, [currentUserId, post.id]);
 
-  const handleReactionChange = (newCount: number, newReaction: string | null) => {
+  const handleReactionChange = useCallback((newCount: number, newReaction: string | null) => {
     setLikeCount(newCount);
     setCurrentReaction(newReaction);
-  };
+  }, []);
 
-  // Prepare media items for MediaGrid - prioritize media_urls, fallback to legacy fields
-  let mediaItems: Array<{ url: string; type: 'image' | 'video' }> = [];
-  
-  if (post.media_urls && Array.isArray(post.media_urls) && post.media_urls.length > 0) {
-    // Use new media_urls array
-    mediaItems = post.media_urls;
-  } else {
-    // Fallback to legacy single image/video fields
+  const toggleComments = useCallback(() => {
+    setShowComments((prev) => !prev);
+  }, []);
+
+  const openEditDialog = useCallback(() => {
+    setShowEditDialog(true);
+  }, []);
+
+  const closeEditDialog = useCallback(() => {
+    setShowEditDialog(false);
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setShowImageViewer(false);
+  }, []);
+
+  const incrementCommentCount = useCallback(() => {
+    setCommentCount((prev) => prev + 1);
+  }, []);
+
+  // Prepare media items for MediaGrid - memoized
+  const mediaItems = useMemo(() => {
+    const items: Array<{ url: string; type: 'image' | 'video' }> = [];
+    
+    if (post.media_urls && Array.isArray(post.media_urls) && post.media_urls.length > 0) {
+      return post.media_urls;
+    }
+    
     if (post.image_url) {
-      mediaItems.push({ url: post.image_url, type: 'image' as const });
+      items.push({ url: post.image_url, type: 'image' as const });
     }
     if (post.video_url) {
-      mediaItems.push({ url: post.video_url, type: 'video' as const });
+      items.push({ url: post.video_url, type: 'video' as const });
     }
-  }
+    return items;
+  }, [post.media_urls, post.image_url, post.video_url]);
 
   return (
     <>
@@ -325,7 +342,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
               {post.user_id === currentUserId && (
                 <>
                   <DropdownMenuItem
-                    onClick={() => setShowEditDialog(true)}
+                    onClick={openEditDialog}
                     className="cursor-pointer gap-3"
                   >
                     <Pencil className="w-5 h-5" />
@@ -333,7 +350,6 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={(e) => {
-                      // Radix DropdownMenu fires reliably via onSelect (onClick can be flaky)
                       e.preventDefault();
                       handleDelete();
                     }}
@@ -366,10 +382,10 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
           totalCount={likeCount}
           commentCount={commentCount}
           shareCount={shareCount}
-          onCommentClick={() => setShowComments(!showComments)}
+          onCommentClick={toggleComments}
         />
 
-        {/* Action Buttons - Larger touch targets on mobile */}
+        {/* Action Buttons */}
         <div className="border-t border-border mx-2 sm:mx-4">
           <div className="flex items-center py-1">
             <ReactionButton
@@ -381,7 +397,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
             />
 
             <button
-              onClick={() => setShowComments(!showComments)}
+              onClick={toggleComments}
               className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 min-h-[48px] rounded-lg transition-colors hover:bg-secondary text-muted-foreground active:bg-secondary/80"
             >
               <MessageCircle className="w-5 h-5 sm:w-5 sm:h-5" />
@@ -412,7 +428,7 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
           <div className="border-t border-border px-4 py-3">
             <CommentSection
               postId={post.id}
-              onCommentAdded={() => setCommentCount((prev) => prev + 1)}
+              onCommentAdded={incrementCommentCount}
             />
           </div>
         )}
@@ -421,15 +437,29 @@ export const FacebookPostCard = ({ post, currentUserId, onPostDeleted, initialSt
       <ImageViewer
         imageUrl={post.image_url || ''}
         isOpen={showImageViewer}
-        onClose={() => setShowImageViewer(false)}
+        onClose={closeImageViewer}
       />
 
       <EditPostDialog
         post={post}
         isOpen={showEditDialog}
-        onClose={() => setShowEditDialog(false)}
+        onClose={closeEditDialog}
         onPostUpdated={onPostDeleted}
       />
     </>
   );
 };
+
+// Memoized export with custom comparison
+export const FacebookPostCard = memo(FacebookPostCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.post.id === nextProps.post.id &&
+    prevProps.post.content === nextProps.post.content &&
+    prevProps.post.image_url === nextProps.post.image_url &&
+    prevProps.post.video_url === nextProps.post.video_url &&
+    prevProps.currentUserId === nextProps.currentUserId &&
+    prevProps.initialStats?.commentCount === nextProps.initialStats?.commentCount &&
+    prevProps.initialStats?.shareCount === nextProps.initialStats?.shareCount &&
+    prevProps.initialStats?.reactions?.length === nextProps.initialStats?.reactions?.length
+  );
+});
