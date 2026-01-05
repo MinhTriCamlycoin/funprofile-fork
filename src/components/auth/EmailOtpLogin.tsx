@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,6 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [debugOtp, setDebugOtp] = useState<string | null>(null);
 
   // Countdown timer for OTP expiry
   useEffect(() => {
@@ -29,7 +28,7 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
     }
   }, [countdown]);
 
-  const handleSendOtp = async () => {
+  const handleSendOtp = useCallback(async () => {
     if (!email) {
       toast.error(t('authErrorInvalidEmail'));
       return;
@@ -46,25 +45,19 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
       if (data?.success) {
         setStep('otp');
         setCountdown(300); // 5 minutes
-        // For testing - show debug OTP
-        if (data.debug_otp) {
-          setDebugOtp(data.debug_otp);
-          toast.success(`OTP đã gửi! (Test: ${data.debug_otp})`);
-        } else {
-          toast.success(`${t('otpSentTo')} ${email}`);
-        }
+        toast.success(`${t('otpSentTo')} ${email}`);
       } else {
         throw new Error(data?.error || 'Failed to send OTP');
       }
-    } catch (error: any) {
-      console.error('OTP request error:', error);
-      toast.error(error.message || t('errorOccurred'));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t('errorOccurred');
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [email, t]);
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = useCallback(async () => {
     if (otp.length !== 6) {
       toast.error(t('otpInvalid'));
       return;
@@ -80,14 +73,6 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
 
       if (data?.success && data?.magic_link) {
         // Exchange magic link for session
-        const { error: authError } = await supabase.auth.signInWithOtp({
-          email: email,
-          options: {
-            shouldCreateUser: false,
-          },
-        });
-
-        // Use the magic link token directly
         const urlParams = new URL(data.magic_link).hash.substring(1);
         const params = new URLSearchParams(urlParams);
         const accessToken = params.get('access_token');
@@ -105,18 +90,23 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
       } else {
         throw new Error(data?.error || 'Verification failed');
       }
-    } catch (error: any) {
-      console.error('OTP verify error:', error);
-      toast.error(error.message || t('otpInvalid'));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t('otpInvalid');
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [email, otp, t, onSuccess]);
 
-  const handleResendOtp = async () => {
+  const handleResendOtp = useCallback(async () => {
     setOtp('');
     await handleSendOtp();
-  };
+  }, [handleSendOtp]);
+
+  const handleBackToEmail = useCallback(() => {
+    setStep('email');
+    setOtp('');
+  }, []);
 
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -181,11 +171,6 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
             <p className="text-slate-600">
               {t('otpSentTo')} <span className="font-semibold text-emerald-600">{email}</span>
             </p>
-            {debugOtp && (
-              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
-                🔧 Test Mode - OTP: <span className="font-mono font-bold">{debugOtp}</span>
-              </p>
-            )}
           </div>
 
           <div className="space-y-4">
@@ -252,11 +237,7 @@ export const EmailOtpLogin = ({ onSuccess }: EmailOtpLoginProps) => {
           </Button>
 
           <button
-            onClick={() => {
-              setStep('email');
-              setOtp('');
-              setDebugOtp(null);
-            }}
+            onClick={handleBackToEmail}
             className="w-full text-sm text-slate-500 hover:text-slate-700"
           >
             ← {t('cancel')}

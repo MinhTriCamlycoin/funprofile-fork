@@ -18,7 +18,6 @@ serve(async (req) => {
     console.log(`[OTP-VERIFY] Verifying OTP for: ${identifier}`);
 
     if (!identifier || !code) {
-      console.error('[OTP-VERIFY] Missing identifier or code');
       return new Response(
         JSON.stringify({ success: false, error: 'Identifier and code are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -39,10 +38,10 @@ serve(async (req) => {
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !otpRecord) {
-      console.error('[OTP-VERIFY] No valid OTP found:', fetchError);
+      console.warn('[OTP-VERIFY] No valid OTP found');
       return new Response(
         JSON.stringify({ success: false, error: 'OTP expired or not found. Please request a new one.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -51,8 +50,6 @@ serve(async (req) => {
 
     // Check max attempts
     if (otpRecord.attempts >= otpRecord.max_attempts) {
-      console.error('[OTP-VERIFY] Max attempts exceeded');
-      // Mark as used to prevent further attempts
       await supabase
         .from('otp_codes')
         .update({ is_used: true })
@@ -66,8 +63,6 @@ serve(async (req) => {
 
     // Verify OTP
     if (otpRecord.code !== code) {
-      console.log('[OTP-VERIFY] Invalid OTP code');
-      // Increment attempts
       await supabase
         .from('otp_codes')
         .update({ attempts: otpRecord.attempts + 1 })
@@ -96,29 +91,43 @@ serve(async (req) => {
       ? identifier.toLowerCase() 
       : `${identifier.replace(/[^0-9]/g, '')}@phone.local`;
 
-    // Helper: find user by email via pagination (Auth admin API has no direct lookup)
+    // Optimized: Find user by email using single query with filter
     const findUserByEmail = async (email: string) => {
       const target = email.toLowerCase();
-      const perPage = 1000;
-      const maxPages = 10;
-
-      for (let page = 1; page <= maxPages; page++) {
-        const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-        if (error) throw error;
-
-        const found = data?.users?.find((u) => u.email?.toLowerCase() === target);
-        if (found) return found;
-
-        // Stop early if we reached the end.
-        if (!data?.users || data.users.length < perPage) break;
+      
+      // Try to find user in a single batch (most users will be found here)
+      const { data, error } = await supabase.auth.admin.listUsers({ 
+        page: 1, 
+        perPage: 1000 
+      });
+      
+      if (error) throw error;
+      
+      const found = data?.users?.find((u) => u.email?.toLowerCase() === target);
+      if (found) return found;
+      
+      // Only paginate if not found and there might be more users
+      if (data?.users?.length === 1000) {
+        // Check subsequent pages only if needed
+        for (let page = 2; page <= 5; page++) {
+          const { data: pageData, error: pageError } = await supabase.auth.admin.listUsers({ 
+            page, 
+            perPage: 1000 
+          });
+          if (pageError) throw pageError;
+          
+          const foundInPage = pageData?.users?.find((u) => u.email?.toLowerCase() === target);
+          if (foundInPage) return foundInPage;
+          
+          if (!pageData?.users || pageData.users.length < 1000) break;
+        }
       }
-
+      
       return null;
     };
 
     // Check if user exists
     let user = await findUserByEmail(userEmail);
-
     let isNewUser = false;
 
     if (!user) {
@@ -142,15 +151,14 @@ serve(async (req) => {
       });
 
       if (createError) {
-        // If email exists error, user was created between our check - fetch it reliably
+        // Handle race condition
         if (
           createError.message?.includes('already been registered') ||
-          (createError as any).code === 'email_exists'
+          (createError as unknown as { code?: string }).code === 'email_exists'
         ) {
-          console.log('[OTP-VERIFY] User already exists (race condition), fetching user...');
+          console.log('[OTP-VERIFY] User already exists (race condition), fetching...');
           user = await findUserByEmail(userEmail);
           if (!user) {
-            console.error('[OTP-VERIFY] User exists but could not be retrieved');
             return new Response(
               JSON.stringify({ success: false, error: 'User exists but could not be retrieved' }),
               { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -166,9 +174,6 @@ serve(async (req) => {
       } else {
         user = newUser.user;
       }
-    } else {
-      console.log('[OTP-VERIFY] Found existing user:', user.id);
-      isNewUser = false;
     }
 
     // Update last login platform
