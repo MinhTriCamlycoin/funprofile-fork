@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -8,6 +8,31 @@ import { Loader2 } from 'lucide-react';
 export const SocialLogin = () => {
   const { t } = useLanguage();
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Listen for OAuth sign-in and update last_login_platform
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const provider = session.user.app_metadata?.provider;
+        if (provider && provider !== 'email') {
+          // Defer the database update to avoid auth deadlock
+          setTimeout(async () => {
+            try {
+              await supabase
+                .from('profiles')
+                .update({ last_login_platform: provider })
+                .eq('id', session.user.id);
+              console.log('[SocialLogin] Updated last_login_platform to:', provider);
+            } catch (error) {
+              console.error('[SocialLogin] Failed to update platform:', error);
+            }
+          }, 0);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);

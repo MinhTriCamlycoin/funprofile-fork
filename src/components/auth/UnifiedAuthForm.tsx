@@ -63,6 +63,17 @@ export const UnifiedAuthForm = () => {
   };
 
   const handleAuthSuccess = async (userId: string, isNewUser: boolean) => {
+    // Verify session is properly set before proceeding
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.error('[Auth] No session found after auth success');
+      toast.error(t('authErrorGeneric'));
+      return;
+    }
+
+    console.log('[Auth] Session verified for user:', userId);
+
     if (isNewUser) {
       await handleNewUserSetup(userId);
     } else {

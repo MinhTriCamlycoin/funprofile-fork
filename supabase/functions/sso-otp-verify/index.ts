@@ -184,14 +184,45 @@ serve(async (req) => {
         .eq('id', user.id);
     }
 
-    // Generate session for user
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+    // Generate session directly using admin API
+    console.log('[OTP-VERIFY] Creating session for user:', user?.id);
+    
+    // Use signInWithPassword with a generated token approach
+    // Since we verified OTP, we can generate a session directly
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: userEmail,
     });
 
-    if (sessionError) {
-      console.error('[OTP-VERIFY] Failed to generate session:', sessionError);
+    if (linkError || !linkData) {
+      console.error('[OTP-VERIFY] Failed to generate link:', linkError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to create session' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Extract the token from the magic link and verify it to get session
+    const magicLinkUrl = new URL(linkData.properties?.action_link || '');
+    const token_hash = magicLinkUrl.searchParams.get('token');
+    const type = magicLinkUrl.searchParams.get('type') as 'magiclink';
+
+    if (!token_hash) {
+      console.error('[OTP-VERIFY] No token in magic link');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to extract session token' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify the token to get a real session
+    const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: type || 'magiclink',
+    });
+
+    if (sessionError || !sessionData.session) {
+      console.error('[OTP-VERIFY] Failed to verify token:', sessionError);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to create session' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -206,7 +237,8 @@ serve(async (req) => {
         message: 'OTP verified successfully',
         user_id: user?.id,
         is_new_user: isNewUser,
-        magic_link: sessionData?.properties?.action_link
+        access_token: sessionData.session.access_token,
+        refresh_token: sessionData.session.refresh_token,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
