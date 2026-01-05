@@ -19,7 +19,7 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { userId } = useParams();
+  const { userId, username } = useParams();
   const [profile, setProfile] = useState<any>(null);
   const [allPosts, setAllPosts] = useState<any[]>([]); // Combined and sorted posts
   const [originalPosts, setOriginalPosts] = useState<any[]>([]); // For photos grid
@@ -28,12 +28,40 @@ const Profile = () => {
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [friendsCount, setFriendsCount] = useState(0);
 
+  // Reserved paths that should NOT be treated as usernames
+  const reservedPaths = ['auth', 'feed', 'friends', 'wallet', 'about', 'leaderboard', 'admin', 'notifications', 'docs', 'post', 'law-of-light', 'profile'];
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
         setCurrentUserId(session.user.id);
+      }
+      
+      // Check if username route is actually a reserved path
+      if (username && reservedPaths.includes(username.toLowerCase())) {
+        navigate(`/${username}`);
+        return;
+      }
+      
+      // If username is provided, look up by username
+      if (username) {
+        const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', cleanUsername)
+          .single();
+        
+        if (profileData) {
+          setIsOwnProfile(session ? profileData.id === session.user.id : false);
+          fetchProfile(profileData.id);
+        } else {
+          setLoading(false);
+          setProfile(null);
+        }
+        return;
       }
       
       let profileId = userId;
@@ -65,7 +93,7 @@ const Profile = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, userId]);
+  }, [navigate, userId, username]);
 
   const fetchProfile = async (profileId: string) => {
     try {
