@@ -2,6 +2,15 @@
  * Fun Profile SSO SDK - Constants
  */
 
+// Fun Ecosystem Domains
+export const DOMAINS = {
+  funProfile: 'https://fun.rich',
+  funFarm: 'https://farm.fun.rich',
+  funPlay: 'https://play.fun.rich',
+  funPlanet: 'https://planet.fun.rich',
+} as const;
+
+// Default SSO API base URL (Fun Profile)
 export const DEFAULT_BASE_URL = 'https://bhtsnervqiwchluwuxki.supabase.co/functions/v1';
 
 export const ENDPOINTS = {
