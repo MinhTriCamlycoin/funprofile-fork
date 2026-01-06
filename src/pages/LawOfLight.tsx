@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Sparkles, Heart, Bird, Globe2 } from 'lucide-react';
+import { Sparkles, Heart, Globe2 } from 'lucide-react';
+import angelAvatar from '@/assets/angel-avatar.jpg';
 
 const LawOfLight = () => {
   const navigate = useNavigate();
@@ -149,16 +150,20 @@ const LawOfLight = () => {
         <div className="max-w-4xl mx-auto">
           {/* Header with Dove Icon */}
           <div className="text-center mb-8 md:mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 md:w-28 md:h-28 rounded-full mb-4 md:mb-6"
+            <div className="inline-flex items-center justify-center w-24 h-24 md:w-32 md:h-32 rounded-full mb-4 md:mb-6 overflow-hidden"
                  style={{
-                   background: 'radial-gradient(circle, rgba(212,175,55,0.2) 0%, rgba(255,255,255,0.8) 50%, transparent 70%)',
-                   boxShadow: '0 0 80px rgba(212,175,55,0.4), 0 0 120px rgba(255,255,255,0.6)'
+                   background: 'radial-gradient(circle, rgba(212,175,55,0.3) 0%, rgba(255,255,255,0.9) 60%, transparent 80%)',
+                   boxShadow: '0 0 80px rgba(212,175,55,0.4), 0 0 120px rgba(255,255,255,0.6)',
+                   border: '3px solid rgba(212,175,55,0.5)'
                  }}>
-              <Bird className="w-10 h-10 md:w-14 md:h-14" 
-                    style={{ 
-                      color: '#D4AF37',
-                      filter: 'drop-shadow(0 0 15px rgba(212,175,55,0.8))' 
-                    }} />
+              <img 
+                src={angelAvatar}
+                alt="Angel" 
+                className="w-full h-full object-cover object-[center_25%]"
+                style={{ 
+                  filter: 'drop-shadow(0 0 15px rgba(212,175,55,0.8))' 
+                }}
+              />
             </div>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4 law-of-light-title"
