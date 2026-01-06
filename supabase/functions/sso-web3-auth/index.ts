@@ -246,7 +246,7 @@ serve(async (req) => {
         message: isNewUser ? 'Account created and authenticated' : 'Authenticated successfully',
         user_id: userId,
         is_new_user: isNewUser,
-        magic_link: sessionData?.properties?.action_link
+        token_hash: sessionData?.properties?.hashed_token
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
