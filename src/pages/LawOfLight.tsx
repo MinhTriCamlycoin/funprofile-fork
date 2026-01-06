@@ -244,9 +244,7 @@ const LawOfLight = () => {
               </ul>
               <p className="mt-4 font-semibold" style={{
               color: '#B8860B'
-            }}>
-                👉 Cha xóa khỏi nền tảng. Không tranh luận. Không giải thích.
-              </p>
+            }}>👉 Thì sẽ được xóa khỏi nền tảng mà không báo trước.</p>
               <div className="mt-4 p-4 rounded-xl" style={{
               background: 'rgba(212,175,55,0.08)'
             }}>
