@@ -10,6 +10,8 @@ import {
   Sparkles,
   LogOut,
   Globe,
+  Link2,
+  BookOpen,
 } from 'lucide-react';
 import funEcosystemLogo from '@/assets/fun-ecosystem-logo.webp';
 import funFarmLogo from '@/assets/fun-farm-logo.webp';
@@ -66,6 +68,8 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
   const shortcutItems = [
     { icon: UsersRound, label: t('groups'), path: '/groups', color: 'text-blue-500' },
     { icon: Flag, label: t('pages') || 'Trang', path: '/pages', color: 'text-orange-500' },
+    { icon: Link2, label: 'Connected Apps', path: '/profile/connected-apps', color: 'text-purple-500' },
+    { icon: BookOpen, label: 'SSO Docs', path: '/docs/ecosystem', color: 'text-green-500' },
   ];
 
   // FUN Ecosystem shortcuts
