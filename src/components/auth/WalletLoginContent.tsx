@@ -66,25 +66,20 @@ export const WalletLoginContent = ({ onSuccess }: WalletLoginContentProps) => {
 
       if (error) throw error;
 
-      if (data?.success && data?.magic_link) {
-        // Extract tokens from magic link and set session
-        const url = new URL(data.magic_link);
-        const hashParams = new URLSearchParams(url.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
+      if (data?.success && data?.token_hash) {
+        // Verify OTP with token_hash to create session
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: 'email',
+        });
 
-        if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
+        if (verifyError) throw verifyError;
 
-          // Update last_login_platform to 'FUN Profile'
-          await supabase
-            .from('profiles')
-            .update({ last_login_platform: 'FUN Profile' })
-            .eq('id', data.user_id);
-        }
+        // Update last_login_platform to 'FUN Profile'
+        await supabase
+          .from('profiles')
+          .update({ last_login_platform: 'FUN Profile' })
+          .eq('id', data.user_id);
 
         toast.success(data.is_new_user ? t('welcomeNewUser') : t('welcomeBack'));
         onSuccess(data.user_id, data.is_new_user);
