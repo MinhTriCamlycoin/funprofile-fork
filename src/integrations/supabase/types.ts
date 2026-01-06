@@ -136,6 +136,73 @@ export type Database = {
           },
         ]
       }
+      cross_platform_tokens: {
+        Row: {
+          access_token: string
+          access_token_expires_at: string
+          client_id: string
+          created_at: string
+          device_info: Json | null
+          id: string
+          is_revoked: boolean
+          last_used_at: string | null
+          refresh_token: string
+          refresh_token_expires_at: string
+          scope: string[]
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          access_token_expires_at: string
+          client_id: string
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          is_revoked?: boolean
+          last_used_at?: string | null
+          refresh_token: string
+          refresh_token_expires_at: string
+          scope?: string[]
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          access_token_expires_at?: string
+          client_id?: string
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          is_revoked?: boolean
+          last_used_at?: string | null
+          refresh_token?: string
+          refresh_token_expires_at?: string
+          scope?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cross_platform_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "cross_platform_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cross_platform_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custodial_wallets: {
         Row: {
           chain_id: number
@@ -290,6 +357,70 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      oauth_codes: {
+        Row: {
+          client_id: string
+          code: string
+          code_challenge: string | null
+          code_challenge_method: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          is_used: boolean
+          redirect_uri: string
+          scope: string[]
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          code: string
+          code_challenge?: string | null
+          code_challenge_method?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_used?: boolean
+          redirect_uri: string
+          scope?: string[]
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          code?: string
+          code_challenge?: string | null
+          code_challenge_method?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_used?: boolean
+          redirect_uri?: string
+          scope?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_codes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "oauth_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oauth_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       otp_codes: {
         Row: {
@@ -829,10 +960,12 @@ export type Database = {
         Args: { p_admin_id: string; p_reason?: string; p_user_id: string }
         Returns: boolean
       }
+      cleanup_expired_oauth_data: { Args: never; Returns: undefined }
       delete_storage_object: {
         Args: { bucket_name: string; object_path: string }
         Returns: undefined
       }
+      generate_secure_token: { Args: { length?: number }; Returns: string }
       get_user_rewards: {
         Args: { limit_count?: number }
         Returns: {
