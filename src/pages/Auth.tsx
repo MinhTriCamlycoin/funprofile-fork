@@ -10,6 +10,13 @@ const Auth = () => {
   const { t } = useLanguage();
 
   useEffect(() => {
+    // Check if Law of Light was accepted before allowing access to auth
+    const pending = localStorage.getItem('law_of_light_accepted_pending');
+    if (!pending) {
+      navigate('/law-of-light', { replace: true });
+      return;
+    }
+
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {

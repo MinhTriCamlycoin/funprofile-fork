@@ -14,13 +14,27 @@ export const LawOfLightGuard = ({ children }: LawOfLightGuardProps) => {
 
   useEffect(() => {
     const checkLawOfLightAcceptance = async () => {
-      // Skip check for public pages (removed /begin)
-      const publicPaths = ['/auth', '/law-of-light', '/docs'];
+      // Skip check for public pages
+      const publicPaths = ['/law-of-light', '/docs'];
       const isPublicPath = publicPaths.some(path => location.pathname.startsWith(path));
       
       if (isPublicPath) {
         setIsAllowed(true);
         setIsChecking(false);
+        return;
+      }
+
+      // Special handling for /auth - require Law of Light acceptance first
+      if (location.pathname.startsWith('/auth')) {
+        const pending = localStorage.getItem('law_of_light_accepted_pending');
+        if (pending === 'true') {
+          // Already accepted Law of Light → allow access to /auth
+          setIsAllowed(true);
+          setIsChecking(false);
+          return;
+        }
+        // Not accepted yet → redirect to Law of Light
+        navigate('/law-of-light', { replace: true });
         return;
       }
 
