@@ -3,6 +3,7 @@ import { useLocation, Navigate } from "react-router-dom";
 
 import EcosystemDocs from "@/pages/EcosystemDocs";
 import PlatformDocs from "@/pages/PlatformDocs";
+import IntegrationDocs from "@/pages/IntegrationDocs";
 
 const setCanonical = (href: string) => {
   let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
@@ -27,7 +28,7 @@ const ensureMetaDescription = (content: string) => {
 export default function DocsRouter() {
   const location = useLocation();
 
-  // /docs/* fallback router (helps on hosts that don’t preserve deep-link routing correctly)
+  // /docs/* fallback router (helps on hosts that don't preserve deep-link routing correctly)
   const subpath = location.pathname.replace(/^\/docs\/?/, "");
   const first = subpath.split("/").filter(Boolean)[0] ?? "";
 
@@ -52,6 +53,15 @@ export default function DocsRouter() {
       return;
     }
 
+    if (first === "integration") {
+      document.title = "FUN Profile Integration Guide";
+      ensureMetaDescription(
+        "Hướng dẫn tích hợp FUN Profile SSO cho các platform: Fun Farm, Fun Play, Fun Planet."
+      );
+      setCanonical(`${origin}/docs/integration`);
+      return;
+    }
+
     document.title = "FUN Ecosystem Documentation";
     ensureMetaDescription(
       "Tài liệu FUN Ecosystem: SSO, app architecture, wallet, feed, rewards, media và admin."
@@ -61,6 +71,7 @@ export default function DocsRouter() {
 
   if (first === "platform") return <PlatformDocs />;
   if (first === "ecosystem") return <EcosystemDocs />;
+  if (first === "integration") return <IntegrationDocs />;
 
   return <Navigate to="/docs/ecosystem" replace />;
 }
