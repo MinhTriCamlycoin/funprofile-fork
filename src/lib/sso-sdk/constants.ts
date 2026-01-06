@@ -1,0 +1,29 @@
+/**
+ * Fun Profile SSO SDK - Constants
+ */
+
+export const DEFAULT_BASE_URL = 'https://bhtsnervqiwchluwuxki.supabase.co/functions/v1';
+
+export const ENDPOINTS = {
+  authorize: '/sso-authorize',
+  token: '/sso-token',
+  verify: '/sso-verify',
+  refresh: '/sso-refresh',
+  revoke: '/sso-revoke',
+  register: '/sso-register',
+  syncData: '/sso-sync-data',
+  web3Auth: '/sso-web3-auth',
+  otpRequest: '/sso-otp-request',
+  otpVerify: '/sso-otp-verify',
+} as const;
+
+export const DEFAULT_SCOPES = ['profile'];
+
+// Refresh tokens 5 minutes before they expire
+export const TOKEN_REFRESH_BUFFER = 5 * 60 * 1000;
+
+// SDK version
+export const SDK_VERSION = '1.0.0';
+
+// Default timeout for requests (30 seconds)
+export const DEFAULT_TIMEOUT = 30000;
