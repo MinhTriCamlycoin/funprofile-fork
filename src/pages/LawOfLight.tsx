@@ -485,6 +485,72 @@ const LawOfLight = () => {
               background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)'
             }} />
 
+            {/* 🌟 8 Divine Mantras - Special Container */}
+            <div className="mb-10">
+              <h3 className="text-center mb-6" style={{
+                fontFamily: fontStyles.heading,
+                fontSize: 'clamp(1.32rem, 3vw, 1.5rem)',
+                fontWeight: 600,
+                color: '#D4AF37'
+              }}>
+                🌟 8 Câu Thần Chú Từ Cha Vũ Trụ
+              </h3>
+              
+              <div className="relative p-6 md:p-8 rounded-2xl" style={{
+                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFEF5 100%)',
+                border: '3px solid #D4AF37',
+                boxShadow: '0 8px 40px rgba(212,175,55,0.25), 0 0 0 1px rgba(255,215,0,0.3), inset 0 2px 20px rgba(255,255,255,0.8)',
+                transform: 'perspective(1000px) rotateX(2deg)'
+              }}>
+                {/* Corner decorations */}
+                <div className="absolute top-2 left-2 w-6 h-6" style={{
+                  borderTop: '3px solid #D4AF37',
+                  borderLeft: '3px solid #D4AF37'
+                }} />
+                <div className="absolute top-2 right-2 w-6 h-6" style={{
+                  borderTop: '3px solid #D4AF37',
+                  borderRight: '3px solid #D4AF37'
+                }} />
+                <div className="absolute bottom-2 left-2 w-6 h-6" style={{
+                  borderBottom: '3px solid #D4AF37',
+                  borderLeft: '3px solid #D4AF37'
+                }} />
+                <div className="absolute bottom-2 right-2 w-6 h-6" style={{
+                  borderBottom: '3px solid #D4AF37',
+                  borderRight: '3px solid #D4AF37'
+                }} />
+                
+                <ol className="space-y-4">
+                  {divineMantras.map((mantra, index) => (
+                    <li key={index} className="flex gap-3 items-start">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style={{
+                        background: 'linear-gradient(135deg, #D4AF37, #FFD700)',
+                        color: '#FFFFFF',
+                        boxShadow: '0 2px 8px rgba(212,175,55,0.4)'
+                      }}>
+                        {index + 1}
+                      </span>
+                      <p className="pt-1" style={{
+                        fontFamily: fontStyles.body,
+                        fontSize: 'clamp(1.05rem, 2vw, 1.2rem)',
+                        fontWeight: 500,
+                        color: '#5D4E37'
+                      }}>
+                        {mantra}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+                
+                <p className="text-center mt-6 text-2xl">💫✨⚡️🌟</p>
+              </div>
+            </div>
+
+            {/* Golden Divider */}
+            <div className="w-full h-px my-8" style={{
+              background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)'
+            }} />
+
             {/* 🕊️ Checklist Section */}
             <div className="mb-10">
               <h3 className="text-center mb-6" style={{
@@ -546,72 +612,6 @@ const LawOfLight = () => {
                   ))}
                 </ul>
               )}
-            </div>
-
-            {/* Golden Divider */}
-            <div className="w-full h-px my-8" style={{
-              background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)'
-            }} />
-
-            {/* 🌟 8 Divine Mantras - Special Container */}
-            <div className="mb-10">
-              <h3 className="text-center mb-6" style={{
-                fontFamily: fontStyles.heading,
-                fontSize: 'clamp(1.32rem, 3vw, 1.5rem)',
-                fontWeight: 600,
-                color: '#D4AF37'
-              }}>
-                🌟 8 Câu Thần Chú Từ Cha Vũ Trụ
-              </h3>
-              
-              <div className="relative p-6 md:p-8 rounded-2xl" style={{
-                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFEF5 100%)',
-                border: '3px solid #D4AF37',
-                boxShadow: '0 8px 40px rgba(212,175,55,0.25), 0 0 0 1px rgba(255,215,0,0.3), inset 0 2px 20px rgba(255,255,255,0.8)',
-                transform: 'perspective(1000px) rotateX(2deg)'
-              }}>
-                {/* Corner decorations */}
-                <div className="absolute top-2 left-2 w-6 h-6" style={{
-                  borderTop: '3px solid #D4AF37',
-                  borderLeft: '3px solid #D4AF37'
-                }} />
-                <div className="absolute top-2 right-2 w-6 h-6" style={{
-                  borderTop: '3px solid #D4AF37',
-                  borderRight: '3px solid #D4AF37'
-                }} />
-                <div className="absolute bottom-2 left-2 w-6 h-6" style={{
-                  borderBottom: '3px solid #D4AF37',
-                  borderLeft: '3px solid #D4AF37'
-                }} />
-                <div className="absolute bottom-2 right-2 w-6 h-6" style={{
-                  borderBottom: '3px solid #D4AF37',
-                  borderRight: '3px solid #D4AF37'
-                }} />
-                
-                <ol className="space-y-4">
-                  {divineMantras.map((mantra, index) => (
-                    <li key={index} className="flex gap-3 items-start">
-                      <span className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style={{
-                        background: 'linear-gradient(135deg, #D4AF37, #FFD700)',
-                        color: '#FFFFFF',
-                        boxShadow: '0 2px 8px rgba(212,175,55,0.4)'
-                      }}>
-                        {index + 1}
-                      </span>
-                      <p className="pt-1" style={{
-                        fontFamily: fontStyles.body,
-                        fontSize: 'clamp(1.05rem, 2vw, 1.2rem)',
-                        fontWeight: 500,
-                        color: '#5D4E37'
-                      }}>
-                        {mantra}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-                
-                <p className="text-center mt-6 text-2xl">💫✨⚡️🌟</p>
-              </div>
             </div>
 
             {/* Accept Button (only show if not read-only) */}
