@@ -257,7 +257,23 @@ Deno.serve(async (req) => {
   }
 });
 
-// Helper function to send webhook
+// Create HMAC-SHA256 signature for webhook payload
+async function createWebhookSignature(payload: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Helper function to send webhook with signature verification
 async function sendWebhook(
   supabase: any,
   mergeRequest: any,
@@ -265,16 +281,35 @@ async function sendWebhook(
   funProfileId: string | null
 ) {
   try {
-    // Get webhook URL from oauth_clients
+    // Get webhook URL and client_secret from oauth_clients
     const { data: client } = await supabase
       .from('oauth_clients')
-      .select('webhook_url')
+      .select('webhook_url, client_secret')
       .eq('platform_name', mergeRequest.source_platform)
       .single();
 
     if (!client?.webhook_url) {
       console.log('[sso-merge-approve] No webhook URL configured');
       return;
+    }
+
+    // Get profile data if merge completed
+    let profileData = null;
+    if (status === 'completed' && funProfileId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, avatar_url, full_name, fun_id')
+        .eq('id', funProfileId)
+        .single();
+      
+      if (profile) {
+        profileData = {
+          username: profile.username,
+          avatar_url: profile.avatar_url,
+          full_name: profile.full_name,
+          fun_id: profile.fun_id
+        };
+      }
     }
 
     const webhookPayload = {
@@ -285,8 +320,17 @@ async function sendWebhook(
       fun_profile_id: funProfileId,
       merge_type: mergeRequest.merge_type,
       platform_data_imported: status === 'completed' && Object.keys(mergeRequest.platform_data || {}).length > 0,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Profile data for metadata sync
+      profile_data: profileData
     };
+
+    const payloadString = JSON.stringify(webhookPayload);
+    
+    // Create signature using client_secret
+    const signature = client.client_secret 
+      ? await createWebhookSignature(payloadString, client.client_secret)
+      : '';
 
     console.log('[sso-merge-approve] Sending webhook to:', client.webhook_url);
 
@@ -294,9 +338,10 @@ async function sendWebhook(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Fun-Profile-Webhook': 'true'
+        'X-Fun-Profile-Webhook': 'true',
+        'X-Fun-Signature': signature
       },
-      body: JSON.stringify(webhookPayload)
+      body: payloadString
     });
 
     if (response.ok) {
@@ -309,7 +354,7 @@ async function sendWebhook(
         })
         .eq('id', mergeRequest.id);
 
-      console.log('[sso-merge-approve] Webhook sent successfully');
+      console.log('[sso-merge-approve] Webhook sent successfully with signature');
     } else {
       console.error('[sso-merge-approve] Webhook failed:', response.status);
     }
