@@ -157,7 +157,7 @@ export function MergeRequestsTab() {
   const formatPlatformData = (data: Json) => {
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) return 'Không có dữ liệu';
     return (
-      <pre className="text-xs bg-muted p-2 rounded max-h-32 overflow-auto">
+      <pre className="text-xs bg-muted p-2 rounded max-h-32 max-w-full overflow-auto whitespace-pre-wrap break-all">
         {JSON.stringify(data, null, 2)}
       </pre>
     );
