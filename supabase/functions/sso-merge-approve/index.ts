@@ -1,4 +1,5 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from 'https://esm.sh/resend@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -232,6 +233,37 @@ Deno.serve(async (req) => {
     });
 
     console.log('[sso-merge-approve] Merge completed successfully');
+
+    // Send notification email to user
+    try {
+      const resendApiKey = Deno.env.get('RESEND_API_KEY');
+      if (resendApiKey) {
+        const resend = new Resend(resendApiKey);
+        await resend.emails.send({
+          from: 'FUN Profile <noreply@fun.rich>',
+          to: [mergeRequest.email],
+          subject: 'Tài khoản đã được liên kết thành công với FUN Profile!',
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h1 style="color: #333;">Xin chào ${mergeRequest.source_username || 'bạn'}!</h1>
+              <p style="font-size: 16px; line-height: 1.5;">
+                Tài khoản <strong>${mergeRequest.source_platform}</strong> của bạn đã được liên kết thành công với FUN Profile.
+              </p>
+              <p style="font-size: 16px; line-height: 1.5;">
+                Bạn có thể đăng nhập vào FUN Profile bằng email: <strong>${mergeRequest.email}</strong>
+              </p>
+              ${admin_note ? `<p style="font-size: 14px; color: #666;"><em>Ghi chú từ Admin: ${admin_note}</em></p>` : ''}
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+              <p style="color: #666; font-size: 14px;">Trân trọng,<br/>FUN Profile Team</p>
+            </div>
+          `
+        });
+        console.log('[sso-merge-approve] Notification email sent to:', mergeRequest.email);
+      }
+    } catch (emailError) {
+      console.error('[sso-merge-approve] Failed to send email:', emailError);
+      // Non-fatal, continue
+    }
 
     // Send webhook to source platform
     await sendWebhook(supabase, mergeRequest, 'completed', funProfileUserId);
