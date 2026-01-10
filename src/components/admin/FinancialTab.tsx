@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -48,7 +49,9 @@ import {
   XCircle,
   Play,
   Download,
-  Calculator
+  Calculator,
+  Eye,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -216,10 +219,42 @@ const FinancialTab = () => {
   const [runningReconciliation, setRunningReconciliation] = useState(false);
   const [recalculateDialogOpen, setRecalculateDialogOpen] = useState(false);
   const [selectedUserForRecalc, setSelectedUserForRecalc] = useState<{userId: string, clientId: string, username: string} | null>(null);
+  const [activeTab, setActiveTab] = useState("users");
+  const [transactionDialogUser, setTransactionDialogUser] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Get latest critical reconciliation issue
+  const latestCriticalLog = reconciliationLogs.find(log => 
+    log.status === 'critical' || log.status === 'mismatch'
+  );
+
+  // Recalculate from discrepancy row
+  const handleRecalculateFromDiscrepancy = async (userId: string, clientId: string) => {
+    try {
+      const { error } = await supabase.rpc('recalculate_user_financial', {
+        p_user_id: userId,
+        p_client_id: clientId
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Đã tính lại số dư từ transaction log");
+      await loadData();
+    } catch (error) {
+      console.error("Error recalculating:", error);
+      toast.error("Lỗi khi tính lại số dư");
+    }
+  };
+
+  // View transactions for specific user
+  const handleViewUserTransactions = (userId: string) => {
+    setTransactionDialogUser(userId);
+    setActiveTab("transactions");
+    setSearchTerm(userId);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -477,6 +512,34 @@ const FinancialTab = () => {
 
   return (
     <div className="space-y-6">
+      {/* Critical Alert Banner - Phase C */}
+      {latestCriticalLog && (
+        <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950/20">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle className="text-red-700 dark:text-red-400 font-semibold">
+            ⚠️ Phát hiện sai lệch tài chính!
+          </AlertTitle>
+          <AlertDescription className="text-red-600 dark:text-red-300">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+              <span>
+                Đối soát lúc {format(new Date(latestCriticalLog.run_at), 'HH:mm dd/MM/yyyy')} 
+                phát hiện <strong>{latestCriticalLog.total_mismatched}</strong> sai lệch 
+                (Level {latestCriticalLog.level}: {latestCriticalLog.status === 'critical' ? 'Nghiêm trọng' : 'Cần xem xét'})
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-red-400 text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 w-fit"
+                onClick={() => setActiveTab("reconciliation")}
+              >
+                <Eye className="w-4 h-4 mr-1" />
+                Xem chi tiết
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Grand Totals Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-200">
@@ -577,7 +640,7 @@ const FinancialTab = () => {
       </div>
 
       {/* Sub-tabs for different views */}
-      <Tabs defaultValue="users" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <TabsList>
             <TabsTrigger value="users" className="gap-2">
@@ -592,9 +655,12 @@ const FinancialTab = () => {
               <History className="w-4 h-4" />
               Transactions
             </TabsTrigger>
-            <TabsTrigger value="reconciliation" className="gap-2">
+            <TabsTrigger value="reconciliation" className="gap-2 relative">
               <Calculator className="w-4 h-4" />
               Reconciliation
+              {latestCriticalLog && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -1143,6 +1209,7 @@ const FinancialTab = () => {
                                             <TableHead className="text-right">Diff</TableHead>
                                             <TableHead className="text-right">Diff %</TableHead>
                                             <TableHead>Level</TableHead>
+                                            <TableHead>Actions</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -1157,6 +1224,30 @@ const FinancialTab = () => {
                                               </TableCell>
                                               <TableCell className="text-right">{d.diff_percent.toFixed(4)}%</TableCell>
                                               <TableCell>{getLevelBadge(d.level)}</TableCell>
+                                              <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 text-xs"
+                                                    onClick={() => handleViewUserTransactions(d.user_id)}
+                                                    title="View Transactions"
+                                                  >
+                                                    <Eye className="w-3 h-3 mr-1" />
+                                                    TX
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                                    onClick={() => handleRecalculateFromDiscrepancy(d.user_id, d.client_id)}
+                                                    title="Recalculate from Transactions"
+                                                  >
+                                                    <RotateCcw className="w-3 h-3 mr-1" />
+                                                    Fix
+                                                  </Button>
+                                                </div>
+                                              </TableCell>
                                             </TableRow>
                                           ))}
                                         </TableBody>

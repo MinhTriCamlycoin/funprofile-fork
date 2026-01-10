@@ -104,3 +104,8 @@ verify_jwt = false
 
 [functions.sso-sync-financial]
 verify_jwt = false
+
+[functions.scheduled-reconciliation]
+verify_jwt = false
+# Schedule: Every Sunday at 00:00 UTC
+# Can also be triggered manually by admin
