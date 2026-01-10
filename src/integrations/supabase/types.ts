@@ -592,6 +592,57 @@ export type Database = {
           },
         ]
       }
+      platform_financial_data: {
+        Row: {
+          client_id: string
+          client_timestamp: string | null
+          created_at: string
+          id: string
+          last_sync_at: string
+          sync_count: number
+          total_bet: number
+          total_deposit: number
+          total_loss: number
+          total_profit: number
+          total_win: number
+          total_withdraw: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          client_timestamp?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string
+          sync_count?: number
+          total_bet?: number
+          total_deposit?: number
+          total_loss?: number
+          total_profit?: number
+          total_win?: number
+          total_withdraw?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          client_timestamp?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string
+          sync_count?: number
+          total_bet?: number
+          total_deposit?: number
+          total_loss?: number
+          total_profit?: number
+          total_win?: number
+          total_withdraw?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_user_data: {
         Row: {
           client_id: string
@@ -693,8 +744,15 @@ export type Database = {
           custodial_wallet_address: string | null
           default_wallet_type: string | null
           external_wallet_address: string | null
+          financial_updated_at: string | null
           full_name: string | null
           fun_id: string | null
+          grand_total_bet: number
+          grand_total_deposit: number
+          grand_total_loss: number
+          grand_total_profit: number
+          grand_total_win: number
+          grand_total_withdraw: number
           id: string
           is_banned: boolean
           is_restricted: boolean
@@ -724,8 +782,15 @@ export type Database = {
           custodial_wallet_address?: string | null
           default_wallet_type?: string | null
           external_wallet_address?: string | null
+          financial_updated_at?: string | null
           full_name?: string | null
           fun_id?: string | null
+          grand_total_bet?: number
+          grand_total_deposit?: number
+          grand_total_loss?: number
+          grand_total_profit?: number
+          grand_total_win?: number
+          grand_total_withdraw?: number
           id: string
           is_banned?: boolean
           is_restricted?: boolean
@@ -755,8 +820,15 @@ export type Database = {
           custodial_wallet_address?: string | null
           default_wallet_type?: string | null
           external_wallet_address?: string | null
+          financial_updated_at?: string | null
           full_name?: string | null
           fun_id?: string | null
+          grand_total_bet?: number
+          grand_total_deposit?: number
+          grand_total_loss?: number
+          grand_total_profit?: number
+          grand_total_win?: number
+          grand_total_withdraw?: number
           id?: string
           is_banned?: boolean
           is_restricted?: boolean
