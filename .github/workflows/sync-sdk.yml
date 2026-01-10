@@ -22,7 +22,7 @@ jobs:
           SSH_DEPLOY_KEY: ${{ secrets.SDK_DEPLOY_KEY }}
         with:
           source-directory: 'sdk-package'
-          destination-github-username: 'fun-ecosystem'
+          destination-github-username: 'MinhTriDiamond'
           destination-repository-name: 'sso-sdk'
           target-branch: main
           commit-message: 'Sync from Fun Profile - ${{ github.sha }}'
