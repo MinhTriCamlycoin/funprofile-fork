@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { DOMAINS } from '@/lib/sso-sdk/constants';
+import { DOMAINS } from '@/config/sso-constants';
 import {
   AlertDialog,
   AlertDialogAction,

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { TableOfContents } from "@/components/docs/TableOfContents";
 import { DocSection, DocSubSection, DocParagraph, DocList, DocTable, DocAlert } from "@/components/docs/DocSection";
 import { CodeBlock } from "@/components/docs/CodeBlock";
-import { DOMAINS, API_BASE_URL } from "@/lib/sso-sdk/constants";
+import { DOMAINS, API_BASE_URL } from "@/config/sso-constants";
 
 const tocItems = [
   { id: "overview", title: "Tổng quan" },
