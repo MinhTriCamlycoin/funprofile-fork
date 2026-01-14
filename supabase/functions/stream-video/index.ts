@@ -23,6 +23,12 @@ function base64EncodeUtf8(str: string): string {
   return btoa(binary);
 }
 
+// Truncate error text for logging (avoid huge responses)
+function truncateErrorText(text: string, maxLen = 500): string {
+  if (!text) return '';
+  return text.length > maxLen ? text.substring(0, maxLen) + '...[truncated]' : text;
+}
+
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -36,7 +42,10 @@ Deno.serve(async (req: Request) => {
     // Validate environment
     if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_STREAM_API_TOKEN) {
       console.error('[stream-video] Missing environment variables');
-      throw new Error('Missing Cloudflare Stream configuration');
+      return new Response(
+        JSON.stringify({ error: 'Missing Cloudflare Stream configuration' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Parse request
@@ -44,15 +53,66 @@ Deno.serve(async (req: Request) => {
     const action = body?.action;
 
     if (!action) {
-      throw new Error('Missing action parameter');
+      return new Response(
+        JSON.stringify({ error: 'Missing action parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('[stream-video] Action:', action);
 
-    // Authenticate user for all actions
+    // Log request fingerprint for debugging
+    const origin = req.headers.get('Origin') || req.headers.get('Referer') || 'unknown';
+    console.log('[stream-video] Request origin:', origin);
+
+    // Authenticate user for all actions except health check
     const authHeader = req.headers.get('Authorization');
+    
+    // Health check can work without auth (but will return limited info)
+    if (action === 'health') {
+      if (!authHeader) {
+        console.log('[stream-video] Health check (no auth)');
+        return new Response(
+          JSON.stringify({ 
+            ok: true, 
+            ts: new Date().toISOString(),
+            authenticated: false,
+            cloudflareConfigured: !!(CLOUDFLARE_ACCOUNT_ID && CLOUDFLARE_STREAM_API_TOKEN),
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // With auth - return user info too
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+      
+      console.log('[stream-video] Health check (authenticated):', user?.id || 'auth failed');
+      
+      return new Response(
+        JSON.stringify({ 
+          ok: true, 
+          ts: new Date().toISOString(),
+          authenticated: !authError && !!user,
+          userId: user?.id,
+          cloudflareConfigured: !!(CLOUDFLARE_ACCOUNT_ID && CLOUDFLARE_STREAM_API_TOKEN),
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // All other actions require auth
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      console.error('[stream-video] Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const supabaseClient = createClient(
@@ -63,8 +123,11 @@ Deno.serve(async (req: Request) => {
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error('[stream-video] Auth error:', authError);
-      throw new Error('Unauthorized');
+      console.error('[stream-video] Auth error:', authError?.message || 'No user');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('[stream-video] User:', user.id);
@@ -77,22 +140,27 @@ Deno.serve(async (req: Request) => {
         const { fileSize, fileName, fileType, fileId } = body;
         
         if (!fileSize || fileSize <= 0) {
-          throw new Error('Invalid file size');
+          return new Response(
+            JSON.stringify({ error: 'Invalid file size', details: `fileSize: ${fileSize}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
-        // Log with file identifier to track duplicate requests
+        // Sanitize filename and log request fingerprint
+        const safeName = (fileName || `video_${Date.now()}`).trim().slice(0, 200);
+        
         console.log('[stream-video] Creating Direct Creator Upload URL:', {
           fileSize,
-          fileName,
+          fileName: safeName,
           fileType,
           fileId: fileId || 'not-provided',
           userId: user.id,
+          origin,
           timestamp: new Date().toISOString(),
         });
 
         // Build upload metadata with user ID and file ID for tracking
         // Use base64EncodeUtf8 for UTF-8 safe encoding (supports Vietnamese/Unicode filenames)
-        const safeName = (fileName || `video_${Date.now()}`).trim().slice(0, 200);
         const metadata = [
           `maxDurationSeconds ${base64EncodeUtf8('7200')}`,
           `requiresignedurls ${base64EncodeUtf8('false')}`,
@@ -119,23 +187,43 @@ Deno.serve(async (req: Request) => {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('[stream-video] Cloudflare error:', errorText);
-          throw new Error(`Cloudflare API error: ${response.status}`);
+          console.error('[stream-video] Cloudflare error:', truncateErrorText(errorText));
+          return new Response(
+            JSON.stringify({ 
+              error: `Cloudflare API error: ${response.status}`, 
+              details: truncateErrorText(errorText, 300),
+              cloudflareStatus: response.status,
+            }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         // Get the direct upload URL from Location header
         const uploadUrl = response.headers.get('Location');
         const streamMediaId = response.headers.get('stream-media-id');
 
+        // Validate we got both required values
+        if (!uploadUrl) {
+          console.error('[stream-video] Missing Location header from Cloudflare');
+          return new Response(
+            JSON.stringify({ error: 'Cloudflare did not return upload URL (missing Location header)' }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (!streamMediaId) {
+          console.error('[stream-video] Missing stream-media-id header from Cloudflare');
+          return new Response(
+            JSON.stringify({ error: 'Cloudflare did not return video UID (missing stream-media-id header)' }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         console.log('[stream-video] Got Direct Upload URL:', {
-          uploadUrl: uploadUrl?.substring(0, 80),
+          uploadUrl: uploadUrl.substring(0, 80),
           uid: streamMediaId,
           fileId: fileId || 'not-provided',
         });
-
-        if (!uploadUrl) {
-          throw new Error('Cloudflare did not return upload URL');
-        }
 
         return new Response(JSON.stringify({
           uploadUrl,
@@ -175,12 +263,27 @@ Deno.serve(async (req: Request) => {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('[stream-video] Direct upload error:', errorText);
-          throw new Error(`Failed to create direct upload: ${response.status}`);
+          console.error('[stream-video] Direct upload error:', truncateErrorText(errorText));
+          return new Response(
+            JSON.stringify({ 
+              error: `Failed to create direct upload: ${response.status}`,
+              details: truncateErrorText(errorText, 300),
+            }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         const data = await response.json();
-        console.log('[stream-video] Direct upload created:', data.result?.uid);
+        
+        if (!data.result?.uploadURL || !data.result?.uid) {
+          console.error('[stream-video] Invalid direct upload response:', data);
+          return new Response(
+            JSON.stringify({ error: 'Invalid response from Cloudflare direct upload' }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log('[stream-video] Direct upload created:', data.result.uid);
         
         return new Response(JSON.stringify({
           uploadUrl: data.result.uploadURL,
@@ -195,7 +298,12 @@ Deno.serve(async (req: Request) => {
       // ============================================
       case 'check-status': {
         const { uid } = body;
-        if (!uid) throw new Error('Missing video UID');
+        if (!uid) {
+          return new Response(
+            JSON.stringify({ error: 'Missing video UID' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
         const response = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${uid}`,
@@ -207,7 +315,14 @@ Deno.serve(async (req: Request) => {
         );
 
         if (!response.ok) {
-          throw new Error(`Failed to check status: ${response.status}`);
+          const errorText = await response.text();
+          return new Response(
+            JSON.stringify({ 
+              error: `Failed to check status: ${response.status}`,
+              details: truncateErrorText(errorText, 300),
+            }),
+            { status: response.status === 404 ? 404 : 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         const data = await response.json();
@@ -231,7 +346,12 @@ Deno.serve(async (req: Request) => {
       // ============================================
       case 'get-playback-url': {
         const { uid } = body;
-        if (!uid) throw new Error('Missing video UID');
+        if (!uid) {
+          return new Response(
+            JSON.stringify({ error: 'Missing video UID' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
         const response = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${uid}`,
@@ -243,7 +363,14 @@ Deno.serve(async (req: Request) => {
         );
 
         if (!response.ok) {
-          throw new Error(`Failed to get playback URL: ${response.status}`);
+          const errorText = await response.text();
+          return new Response(
+            JSON.stringify({ 
+              error: `Failed to get playback URL: ${response.status}`,
+              details: truncateErrorText(errorText, 300),
+            }),
+            { status: response.status === 404 ? 404 : 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         const data = await response.json();
@@ -269,7 +396,12 @@ Deno.serve(async (req: Request) => {
       // ============================================
       case 'delete': {
         const { uid } = body;
-        if (!uid) throw new Error('Missing video UID');
+        if (!uid) {
+          return new Response(
+            JSON.stringify({ error: 'Missing video UID' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
         const response = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${uid}`,
@@ -282,7 +414,14 @@ Deno.serve(async (req: Request) => {
         );
 
         if (!response.ok && response.status !== 404) {
-          throw new Error(`Failed to delete video: ${response.status}`);
+          const errorText = await response.text();
+          return new Response(
+            JSON.stringify({ 
+              error: `Failed to delete video: ${response.status}`,
+              details: truncateErrorText(errorText, 300),
+            }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         console.log('[stream-video] Video deleted:', uid);
@@ -297,7 +436,12 @@ Deno.serve(async (req: Request) => {
       // ============================================
       case 'update-video-settings': {
         const { uid, requireSignedURLs = false, allowedOrigins = ['*'] } = body;
-        if (!uid) throw new Error('Missing video UID');
+        if (!uid) {
+          return new Response(
+            JSON.stringify({ error: 'Missing video UID' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
         console.log('[stream-video] Updating settings for:', uid);
 
@@ -318,8 +462,14 @@ Deno.serve(async (req: Request) => {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('[stream-video] Update settings error:', errorText);
-          throw new Error(`Failed to update settings: ${response.status}`);
+          console.error('[stream-video] Update settings error:', truncateErrorText(errorText));
+          return new Response(
+            JSON.stringify({ 
+              error: `Failed to update settings: ${response.status}`,
+              details: truncateErrorText(errorText, 300),
+            }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         const data = await response.json();
@@ -335,15 +485,18 @@ Deno.serve(async (req: Request) => {
       }
 
       default:
-        throw new Error(`Unknown action: ${action}`);
+        return new Response(
+          JSON.stringify({ error: `Unknown action: ${action}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
     }
   } catch (error) {
-    console.error('[stream-video] Error:', error);
+    console.error('[stream-video] Unhandled error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: errorMessage, type: 'unhandled' }),
       { 
-        status: errorMessage === 'Unauthorized' ? 401 : 400,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
