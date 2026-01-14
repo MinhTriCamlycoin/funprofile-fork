@@ -1,0 +1,129 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface MediaUrl {
+  url: string;
+  type: "image" | "video";
+}
+
+interface CreatePostRequest {
+  content: string;
+  media_urls: MediaUrl[];
+  image_url?: string | null;
+  video_url?: string | null;
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const startTime = Date.now();
+  console.log("[create-post] Start");
+
+  try {
+    // Check authorization
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.log("[create-post] No auth header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create Supabase client with user's token
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    // Verify user using getUser()
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.log("[create-post] Invalid token:", userError?.message);
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("[create-post] User verified:", userId.substring(0, 8) + "...");
+
+    // Parse request body
+    const body: CreatePostRequest = await req.json();
+    console.log("[create-post] Body received:", {
+      contentLength: body.content?.length || 0,
+      mediaCount: body.media_urls?.length || 0,
+    });
+
+    // Validate content
+    if (!body.content?.trim() && (!body.media_urls || body.media_urls.length === 0)) {
+      return new Response(
+        JSON.stringify({ error: "Nội dung hoặc media là bắt buộc" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert post
+    console.log("[create-post] Inserting post...");
+    const insertStart = Date.now();
+    
+    const { data: post, error: insertError } = await supabase
+      .from("posts")
+      .insert({
+        user_id: userId,
+        content: body.content?.trim() || "",
+        image_url: body.image_url || null,
+        video_url: body.video_url || null,
+        media_urls: body.media_urls || [],
+      })
+      .select("id")
+      .single();
+
+    const insertDuration = Date.now() - insertStart;
+    
+    if (insertError) {
+      console.error("[create-post] Insert error:", insertError.message, insertError.code);
+      return new Response(
+        JSON.stringify({ 
+          error: insertError.message || "Không thể lưu bài viết",
+          code: insertError.code,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const totalDuration = Date.now() - startTime;
+    console.log("[create-post] Success!", {
+      postId: post?.id,
+      insertMs: insertDuration,
+      totalMs: totalDuration,
+    });
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        postId: post?.id,
+        timing: { insertMs: insertDuration, totalMs: totalDuration },
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error: any) {
+    console.error("[create-post] Unexpected error:", error.message, error.stack);
+    return new Response(
+      JSON.stringify({ error: error.message || "Lỗi không xác định" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

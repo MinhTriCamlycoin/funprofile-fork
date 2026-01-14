@@ -205,6 +205,29 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
     setContent((prev) => prev + emoji);
   };
 
+  // Submit step state for detailed feedback
+  const [submitStep, setSubmitStep] = useState<'idle' | 'auth' | 'prepare_media' | 'saving' | 'done'>('idle');
+  const submitAbortRef = useRef<AbortController | null>(null);
+
+  const getSubmitButtonText = () => {
+    if (isVideoUploading) return 'Đang upload video...';
+    switch (submitStep) {
+      case 'auth': return 'Đang xác thực...';
+      case 'prepare_media': return 'Đang chuẩn bị media...';
+      case 'saving': return 'Đang lưu bài viết...';
+      default: return loading ? 'Đang đăng...' : 'Đăng';
+    }
+  };
+
+  const handleCancelSubmit = () => {
+    if (submitAbortRef.current) {
+      submitAbortRef.current.abort();
+    }
+    setLoading(false);
+    setSubmitStep('idle');
+    toast.info('Đã huỷ đăng bài');
+  };
+
   const handleSubmit = async () => {
     console.log('[CreatePost] Submit started');
     
@@ -226,12 +249,33 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       return;
     }
 
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Chưa đăng nhập');
+    // Create abort controller for this submit
+    const abortController = new AbortController();
+    submitAbortRef.current = abortController;
+    
+    // Watchdog timeout - auto cancel after 90 seconds
+    const watchdogTimeout = setTimeout(() => {
+      console.error('[CreatePost] Watchdog timeout triggered (90s)');
+      abortController.abort();
+      setLoading(false);
+      setSubmitStep('idle');
+      toast.error('Đăng bài bị timeout, vui lòng thử lại');
+    }, 90000);
 
-      console.log('[CreatePost] Uploading media...');
+    setLoading(true);
+    setSubmitStep('auth');
+    
+    try {
+      // Check if aborted
+      if (abortController.signal.aborted) throw new Error('Đã huỷ');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Chưa đăng nhập');
+
+      console.log('[CreatePost] Auth OK, preparing media...');
+      setSubmitStep('prepare_media');
+      
+      if (abortController.signal.aborted) throw new Error('Đã huỷ');
       
       // Upload all media items (images only - videos handled by Uppy)
       const mediaUrls: Array<{ url: string; type: 'image' | 'video' }> = [];
@@ -246,11 +290,11 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       }
       
       for (const item of mediaItems) {
+        if (abortController.signal.aborted) throw new Error('Đã huỷ');
+        
         if (item.type === 'video') {
-          // Skip videos - they're handled by Uppy component now
           continue;
         } else {
-          // Use R2 for images
           const result = await uploadToR2(item.file, 'posts');
           mediaUrls.push({
             url: result.url,
@@ -260,34 +304,42 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       }
 
       console.log('[CreatePost] Media URLs prepared:', mediaUrls.length);
+      
+      if (abortController.signal.aborted) throw new Error('Đã huỷ');
 
-      // For backward compatibility, also set first image/video in legacy fields
+      // For backward compatibility
       const firstImage = mediaUrls.find((m) => m.type === 'image');
       const firstVideo = mediaUrls.find((m) => m.type === 'video');
 
-      console.log('[CreatePost] Inserting post to database...');
-      
-      // Insert with timeout to prevent infinite hang
-      const insertPromise = supabase.from('posts').insert({
-        user_id: user.id,
-        content: content.trim() || '',
-        image_url: firstImage?.url || null,
-        video_url: firstVideo?.url || null,
-        media_urls: mediaUrls,
-      });
-      
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Lưu bài viết bị timeout (60s)')), 60000)
-      );
-      
-      const { error } = await Promise.race([insertPromise, timeoutPromise]) as any;
+      console.log('[CreatePost] Calling create-post edge function...');
+      setSubmitStep('saving');
 
-      if (error) {
-        console.error('[CreatePost] Insert error:', error);
-        throw error;
+      // Call edge function with timeout
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-post`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          content: content.trim() || '',
+          media_urls: mediaUrls,
+          image_url: firstImage?.url || null,
+          video_url: firstVideo?.url || null,
+        }),
+        signal: abortController.signal,
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('[CreatePost] Edge function error:', result);
+        throw new Error(result.error || 'Không thể lưu bài viết');
       }
 
-      console.log('[CreatePost] Insert success!');
+      console.log('[CreatePost] Success!', result);
+      setSubmitStep('done');
 
       // Reset video upload state AFTER successful insert
       setVideoUploadState('idle');
@@ -305,11 +357,19 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       toast.success('Đã đăng bài viết!');
       onPostCreated();
     } catch (error: any) {
-      console.error('[CreatePost] Error:', error.message, error);
+      if (error.name === 'AbortError' || error.message === 'Đã huỷ') {
+        console.log('[CreatePost] Aborted');
+        // Don't show error for user-initiated cancel
+      } else {
+        console.error('[CreatePost] Error:', error.message, error);
+        toast.error(error.message || 'Không thể đăng bài');
+      }
       setVideoUploadState('idle');
-      toast.error(error.message || 'Không thể đăng bài');
     } finally {
+      clearTimeout(watchdogTimeout);
       setLoading(false);
+      setSubmitStep('idle');
+      submitAbortRef.current = null;
     }
   };
 
@@ -632,14 +692,25 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
 
           {/* Submit Button */}
           <div className="p-4 border-t border-border shrink-0">
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || isVideoUploading || (!content.trim() && mediaItems.length === 0 && !uppyVideoResult)}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isVideoUploading ? 'Đang upload video...' : loading ? 'Đang đăng...' : 'Đăng'}
-            </Button>
+            <div className="flex gap-2">
+              {loading && (
+                <Button
+                  variant="outline"
+                  onClick={handleCancelSubmit}
+                  className="shrink-0"
+                >
+                  Huỷ
+                </Button>
+              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={loading || isVideoUploading || (!content.trim() && mediaItems.length === 0 && !uppyVideoResult)}
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              >
+                {(loading || isVideoUploading) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {getSubmitButtonText()}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
