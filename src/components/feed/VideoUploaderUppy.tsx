@@ -3,7 +3,7 @@ import * as tus from 'tus-js-client';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Video, X, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Video, X, Loader2, CheckCircle, AlertCircle, Clock, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { deleteStreamVideoByUid } from '@/utils/streamHelpers';
 
@@ -27,7 +27,20 @@ interface UploadState {
   localThumbnail?: string;
 }
 
+// Debug timeline for troubleshooting
+interface DebugTimeline {
+  fileSelected?: number;
+  preparingStarted?: number;
+  invokeStarted?: number;
+  invokeFinished?: number;
+  invokeError?: string;
+  tusStarted?: number;
+  firstProgress?: number;
+  lastStep: string;
+}
+
 const CHUNK_SIZE = 50 * 1024 * 1024;
+const BACKEND_TIMEOUT_MS = 20000; // 20 seconds timeout for backend calls
 
 /**
  * Generate a thumbnail from video file using canvas
@@ -77,6 +90,41 @@ const generateVideoThumbnail = (file: File): Promise<string> => {
   });
 };
 
+/**
+ * Invoke supabase function with timeout
+ */
+async function invokeWithTimeout<T>(
+  functionName: string,
+  body: Record<string, unknown>,
+  timeoutMs: number = BACKEND_TIMEOUT_MS
+): Promise<{ data: T | null; error: Error | null }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const { data, error } = await supabase.functions.invoke(functionName, {
+      body,
+      // @ts-ignore - AbortSignal is supported but types may not reflect it
+    });
+
+    clearTimeout(timeoutId);
+
+    if (error) {
+      return { data: null, error: new Error(error.message || 'Backend error') };
+    }
+
+    return { data: data as T, error: null };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { data: null, error: new Error(`Backend timeout (${timeoutMs / 1000}s) - vui lòng thử lại`) };
+    }
+    
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') };
+  }
+}
+
 export const VideoUploaderUppy = ({
   onUploadComplete,
   onUploadError,
@@ -92,17 +140,45 @@ export const VideoUploaderUppy = ({
     bytesTotal: 0,
     uploadSpeed: 0,
   });
+
+  const [debugTimeline, setDebugTimeline] = useState<DebugTimeline>({ lastStep: 'idle' });
+  const [showDebug, setShowDebug] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
   
   const tusUploadRef = useRef<tus.Upload | null>(null);
   const lastBytesRef = useRef(0);
   const lastTimeRef = useRef(Date.now());
   const isUploadingRef = useRef(false);
   const localThumbnailRef = useRef<string | undefined>(undefined);
-  const completedRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // Track the file being uploaded to prevent duplicate uploads
   const currentFileRef = useRef<string | null>(null);
   const uploadStartedRef = useRef(false);
+  const startTimeRef = useRef<number>(0);
+
+  // Update elapsed time every second during preparing/uploading
+  useEffect(() => {
+    if (uploadState.status !== 'preparing' && uploadState.status !== 'uploading') {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (startTimeRef.current > 0) {
+        setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [uploadState.status]);
+
+  // Show debug panel automatically if stuck for 5+ seconds
+  useEffect(() => {
+    if (uploadState.status === 'preparing' && elapsedSeconds >= 5) {
+      setShowDebug(true);
+    }
+  }, [uploadState.status, elapsedSeconds]);
 
   // Cleanup on unmount - delete orphan video if upload wasn't completed
   useEffect(() => {
@@ -110,6 +186,10 @@ export const VideoUploaderUppy = ({
       if (tusUploadRef.current) {
         tusUploadRef.current.abort();
         tusUploadRef.current = null;
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
       
       // Reset refs on unmount
@@ -131,6 +211,59 @@ export const VideoUploaderUppy = ({
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  // Test backend health
+  const testBackendHealth = useCallback(async () => {
+    setBackendHealthy(null);
+    console.log('[VideoUploader] Testing backend health...');
+    
+    const startTime = Date.now();
+    const { data, error } = await invokeWithTimeout<{ ok: boolean; userId?: string; ts?: string }>(
+      'stream-video',
+      { action: 'health' },
+      10000
+    );
+
+    const elapsed = Date.now() - startTime;
+    
+    if (error) {
+      console.error('[VideoUploader] Backend health check failed:', error.message);
+      setBackendHealthy(false);
+      toast.error(`Backend không phản hồi: ${error.message}`);
+    } else if (data?.ok) {
+      console.log('[VideoUploader] Backend healthy:', data, `(${elapsed}ms)`);
+      setBackendHealthy(true);
+      toast.success(`Backend OK (${elapsed}ms)`);
+    } else {
+      console.warn('[VideoUploader] Backend returned unexpected response:', data);
+      setBackendHealthy(false);
+      toast.error('Backend trả về dữ liệu không hợp lệ');
+    }
+  }, []);
+
+  // Retry upload
+  const handleRetry = useCallback(() => {
+    if (!selectedFile) return;
+    
+    // Reset state to trigger re-upload
+    uploadStartedRef.current = false;
+    currentFileRef.current = null;
+    setDebugTimeline({ lastStep: 'retrying' });
+    setElapsedSeconds(0);
+    setUploadState({
+      status: 'idle',
+      progress: 0,
+      bytesUploaded: 0,
+      bytesTotal: 0,
+      uploadSpeed: 0,
+    });
+    
+    // Force effect to re-run by setting a small delay
+    setTimeout(() => {
+      // The useEffect will pick up selectedFile again
+      setUploadState(prev => ({ ...prev }));
+    }, 100);
+  }, [selectedFile]);
 
   // Start upload when file is selected
   useEffect(() => {
@@ -163,9 +296,19 @@ export const VideoUploaderUppy = ({
       // Mark this file as being uploaded
       currentFileRef.current = fileId;
       uploadStartedRef.current = true;
+      startTimeRef.current = Date.now();
+      
+      // Create new abort controller
+      abortControllerRef.current = new AbortController();
       
       try {
         isUploadingRef.current = true;
+        
+        setDebugTimeline({
+          fileSelected: Date.now(),
+          preparingStarted: Date.now(),
+          lastStep: 'preparing',
+        });
         
         setUploadState({
           status: 'preparing',
@@ -190,27 +333,48 @@ export const VideoUploaderUppy = ({
             console.warn('[VideoUploader] Failed to generate local thumbnail:', err);
           });
 
-        // Step 1: Get Direct Upload URL from our backend (ONLY ONCE)
+        // Step 1: Get Direct Upload URL from our backend (with timeout)
         console.log('[VideoUploader] Requesting upload URL from backend...');
-        const { data, error } = await supabase.functions.invoke('stream-video', {
-          body: {
+        
+        setDebugTimeline(prev => ({
+          ...prev,
+          invokeStarted: Date.now(),
+          lastStep: 'calling backend',
+        }));
+
+        const { data, error } = await invokeWithTimeout<{ uploadUrl: string; uid: string }>(
+          'stream-video',
+          {
             action: 'get-tus-upload-url',
             fileSize: selectedFile.size,
             fileName: selectedFile.name,
             fileType: selectedFile.type,
             fileId, // Send file identifier for deduplication tracking
           },
-        });
+          BACKEND_TIMEOUT_MS
+        );
+
+        setDebugTimeline(prev => ({
+          ...prev,
+          invokeFinished: Date.now(),
+          invokeError: error?.message,
+          lastStep: error ? `backend error: ${error.message}` : 'got upload URL',
+        }));
 
         if (error) {
           console.error('[VideoUploader] Failed to get upload URL:', error);
-          throw new Error(error.message || 'Không thể tạo URL tải lên');
+          throw error;
+        }
+
+        if (!data) {
+          throw new Error('Backend trả về dữ liệu rỗng');
         }
 
         const { uploadUrl, uid } = data;
 
         if (!uploadUrl || !uid) {
-          throw new Error('Không nhận được URL tải lên từ server');
+          console.error('[VideoUploader] Invalid response:', data);
+          throw new Error(`Không nhận được URL/UID từ server (uploadUrl: ${!!uploadUrl}, uid: ${!!uid})`);
         }
 
         console.log('[VideoUploader] Got Direct Upload URL:', {
@@ -223,6 +387,12 @@ export const VideoUploaderUppy = ({
           ...prev,
           videoUid: uid,
           status: 'uploading',
+        }));
+
+        setDebugTimeline(prev => ({
+          ...prev,
+          tusStarted: Date.now(),
+          lastStep: 'starting TUS upload',
         }));
 
         // Step 2: Upload directly to Cloudflare using tus-js-client
@@ -249,7 +419,15 @@ export const VideoUploaderUppy = ({
 
             const progress = Math.round((bytesUploaded / bytesTotal) * 100);
 
-            console.log('[VideoUploader] Progress:', progress + '%');
+            // Log first progress
+            if (!debugTimeline.firstProgress) {
+              console.log('[VideoUploader] First progress tick:', progress + '%');
+              setDebugTimeline(prev => ({
+                ...prev,
+                firstProgress: Date.now(),
+                lastStep: 'uploading',
+              }));
+            }
 
             setUploadState(prev => ({
               ...prev,
@@ -261,6 +439,11 @@ export const VideoUploaderUppy = ({
           },
           onSuccess: async () => {
             console.log('[VideoUploader] Upload complete! UID:', uid);
+
+            setDebugTimeline(prev => ({
+              ...prev,
+              lastStep: 'upload complete, processing',
+            }));
 
             setUploadState(prev => ({
               ...prev,
@@ -292,6 +475,11 @@ export const VideoUploaderUppy = ({
               status: 'ready',
             }));
 
+            setDebugTimeline(prev => ({
+              ...prev,
+              lastStep: 'ready',
+            }));
+
             isUploadingRef.current = false;
             toast.success('Video đã tải lên thành công!');
             
@@ -307,14 +495,21 @@ export const VideoUploaderUppy = ({
             console.error('[VideoUploader] TUS upload error:', error);
             isUploadingRef.current = false;
 
+            const errorMsg = error?.message || 'Tải lên thất bại';
+            
+            setDebugTimeline(prev => ({
+              ...prev,
+              lastStep: `TUS error: ${errorMsg}`,
+            }));
+
             setUploadState(prev => ({
               ...prev,
               status: 'error',
-              error: error?.message || 'Tải lên thất bại',
+              error: errorMsg,
             }));
 
             onUploadError?.(error || new Error('Upload failed'));
-            toast.error(`Tải lên thất bại: ${error?.message || 'Vui lòng thử lại'}`);
+            toast.error(`Tải lên thất bại: ${errorMsg}`);
           },
         });
 
@@ -331,6 +526,12 @@ export const VideoUploaderUppy = ({
         currentFileRef.current = null;
 
         const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+        
+        setDebugTimeline(prev => ({
+          ...prev,
+          lastStep: `error: ${errorMessage}`,
+        }));
+        
         setUploadState(prev => ({
           ...prev,
           status: 'error',
@@ -343,9 +544,15 @@ export const VideoUploaderUppy = ({
     };
 
     startUpload();
-  }, [selectedFile, onUploadComplete, onUploadError, onUploadStart]);
+  }, [selectedFile, onUploadComplete, onUploadError, onUploadStart, debugTimeline.firstProgress]);
 
   const handleCancel = useCallback(async () => {
+    // Abort any pending backend request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
     // Abort any in-progress upload
     if (tusUploadRef.current) {
       tusUploadRef.current.abort();
@@ -370,6 +577,8 @@ export const VideoUploaderUppy = ({
       bytesTotal: 0,
       uploadSpeed: 0,
     });
+    setDebugTimeline({ lastStep: 'cancelled' });
+    setElapsedSeconds(0);
     onRemove?.();
   }, [onRemove, uploadState.videoUid]);
 
@@ -410,6 +619,9 @@ export const VideoUploaderUppy = ({
         <div className="flex items-center gap-2">
           <Video className="w-5 h-5 text-primary" />
           <span className="font-medium text-sm">Tải video lên</span>
+          {elapsedSeconds > 0 && uploadState.status !== 'ready' && (
+            <span className="text-xs text-muted-foreground">({elapsedSeconds}s)</span>
+          )}
         </div>
         
         {uploadState.status !== 'ready' && (
@@ -425,11 +637,75 @@ export const VideoUploaderUppy = ({
         )}
       </div>
 
-      {/* Preparing state */}
+      {/* Preparing state with debug info */}
       {uploadState.status === 'preparing' && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Đang chuẩn bị...</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Đang chuẩn bị... ({debugTimeline.lastStep})</span>
+          </div>
+          
+          {/* Show debug panel if stuck */}
+          {showDebug && (
+            <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Debug Timeline</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={testBackendHealth}
+                  className="h-6 text-xs gap-1"
+                >
+                  {backendHealthy === null ? (
+                    <Wifi className="w-3 h-3" />
+                  ) : backendHealthy ? (
+                    <Wifi className="w-3 h-3 text-green-500" />
+                  ) : (
+                    <WifiOff className="w-3 h-3 text-red-500" />
+                  )}
+                  Test Backend
+                </Button>
+              </div>
+              
+              <div className="space-y-1 font-mono">
+                {debugTimeline.preparingStarted && (
+                  <div>T0: Preparing started</div>
+                )}
+                {debugTimeline.invokeStarted && (
+                  <div>T1: Backend call started (+{debugTimeline.invokeStarted - (debugTimeline.preparingStarted || 0)}ms)</div>
+                )}
+                {debugTimeline.invokeFinished && (
+                  <div className={debugTimeline.invokeError ? 'text-red-500' : 'text-green-500'}>
+                    T2: Backend responded (+{debugTimeline.invokeFinished - (debugTimeline.invokeStarted || 0)}ms)
+                    {debugTimeline.invokeError && ` - ${debugTimeline.invokeError}`}
+                  </div>
+                )}
+                <div className="text-muted-foreground">
+                  Current: {debugTimeline.lastStep} ({elapsedSeconds}s elapsed)
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetry}
+                  className="h-7 text-xs gap-1"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Thử lại
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancel}
+                  className="h-7 text-xs"
+                >
+                  Hủy
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -504,29 +780,74 @@ export const VideoUploaderUppy = ({
                 <Video className="w-12 h-12 text-muted-foreground" />
               </div>
             )}
-            <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 rounded px-2 py-1">
-              <CheckCircle className="w-4 h-4 text-green-400" />
-              <span className="text-white text-xs">Sẵn sàng</span>
+            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-green-500" />
             </div>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              Video đã sẵn sàng
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+              className="h-6 text-xs text-muted-foreground hover:text-destructive"
+            >
+              Xóa
+            </Button>
           </div>
         </div>
       )}
 
       {/* Error state */}
       {uploadState.status === 'error' && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-destructive">
             <AlertCircle className="w-4 h-4" />
-            <span>{uploadState.error || 'Tải lên thất bại'}</span>
+            <span>{uploadState.error || 'Đã xảy ra lỗi'}</span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCancel}
-            className="w-full"
-          >
-            Thử lại
-          </Button>
+          
+          {/* Debug info for errors */}
+          <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-2">
+            <div className="font-mono text-muted-foreground">
+              Last step: {debugTimeline.lastStep}
+            </div>
+            {debugTimeline.invokeError && (
+              <div className="font-mono text-red-500">
+                Backend: {debugTimeline.invokeError}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="gap-1"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Thử lại
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={testBackendHealth}
+              className="gap-1"
+            >
+              <Wifi className="w-3 h-3" />
+              Test Backend
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+            >
+              Hủy
+            </Button>
+          </div>
         </div>
       )}
     </div>
