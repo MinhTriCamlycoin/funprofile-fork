@@ -386,10 +386,10 @@ const Profile = () => {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="text-xs sm:text-sm min-h-[44px] px-3 sm:px-4"
+                      className="text-xs sm:text-sm min-h-[44px] px-3 sm:px-4 border-green-500 text-green-600 bg-white hover:bg-green-50"
                       onClick={() => setViewAsPublic(true)}
                     >
-                      <Eye className="w-4 h-4 mr-1 sm:mr-2" />
+                      <Eye className="w-4 h-4 mr-1 sm:mr-2 text-green-600" />
                       <span className="hidden sm:inline">Xem với tư cách khách</span>
                       <span className="sm:hidden">Xem như khách</span>
                     </Button>
