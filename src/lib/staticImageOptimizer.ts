@@ -8,6 +8,23 @@
 
 const CF_IMAGE_DOMAIN = 'https://media.fun.rich';
 
+// Production domains that are whitelisted in Cloudflare for image resizing
+const PRODUCTION_DOMAINS = [
+  'fun.rich',
+  'funprofile.lovable.app'
+];
+
+/**
+ * Check if current environment is production (whitelisted in Cloudflare)
+ */
+function isProductionEnvironment(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  return PRODUCTION_DOMAINS.some(domain => 
+    hostname === domain || hostname.endsWith(`.${domain}`)
+  );
+}
+
 interface OptimizeOptions {
   width?: number;
   height?: number;
@@ -19,6 +36,7 @@ interface OptimizeOptions {
 /**
  * Get optimized URL for static images in /public/ folder
  * Routes through Cloudflare Image Resizing for on-the-fly optimization
+ * Only works in production environments with whitelisted domains
  */
 export function getOptimizedStaticUrl(
   src: string, 
@@ -26,6 +44,12 @@ export function getOptimizedStaticUrl(
 ): string {
   // Only optimize images that start with / (relative paths in public folder)
   if (!src || !src.startsWith('/')) {
+    return src;
+  }
+
+  // Skip optimization in non-production environments
+  // Cloudflare Image Resizing only works for whitelisted domains
+  if (!isProductionEnvironment()) {
     return src;
   }
 
