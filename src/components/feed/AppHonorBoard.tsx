@@ -31,25 +31,19 @@ export const AppHonorBoard = memo(() => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['app-honor-board-stats'],
     queryFn: async (): Promise<AppStats> => {
-      // Fetch all stats in parallel - use get_user_rewards RPC for consistent calculation
+      // Fetch app stats using RPC function for accurate counts (no 1000 row limit)
       const [
-        usersResult, 
-        postsResult, 
+        appStatsResult,
         rewardClaimsResult, 
         transactionsResult,
-        userRewardsResult,
         pricesResponse
       ] = await Promise.all([
-        // Total users
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        // Posts with media counts
-        supabase.from('posts').select('id, image_url, video_url, media_urls'),
+        // Use RPC function to get accurate counts
+        supabase.rpc('get_app_stats'),
         // All claimed rewards (CAMLY token)
         supabase.from('reward_claims').select('amount'),
         // All transactions with token info
         supabase.from('transactions').select('amount, token_symbol'),
-        // Use the same RPC function as Leaderboard & TopRanking for consistent rewards
-        supabase.rpc('get_user_rewards', { limit_count: 10000 }),
         // Fetch token prices from CoinGecko
         fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${Object.values(COINGECKO_IDS).join(',')}&vs_currencies=usd`)
           .then(res => res.ok ? res.json() : null)
@@ -64,30 +58,19 @@ export const AppHonorBoard = memo(() => {
         BTCB: pricesResponse?.[COINGECKO_IDS.BTCB]?.usd || 100000,
       };
 
-      const totalUsers = usersResult.count || 0;
-      const posts = postsResult.data || [];
-
-      // Count photos and videos from posts
-      let totalPhotos = 0;
-      let totalVideos = 0;
-      posts.forEach(post => {
-        if (post.image_url) totalPhotos++;
-        if (post.video_url) totalVideos++;
-        if (post.media_urls && Array.isArray(post.media_urls)) {
-          post.media_urls.forEach((media: any) => {
-            if (media.type === 'image') totalPhotos++;
-            else if (media.type === 'video') totalVideos++;
-          });
-        }
-      });
-
-      // Calculate total rewards using the same RPC function as Leaderboard
-      // This ensures consistency across all components
-      const userRewards = userRewardsResult.data || [];
-      const totalRewards = userRewards.reduce(
-        (sum: number, user: { total_reward: number }) => sum + (Number(user.total_reward) || 0), 
-        0
-      );
+      // Get stats from RPC result (returns single row)
+      const appStats = appStatsResult.data?.[0] as {
+        total_users?: number;
+        total_posts?: number;
+        total_photos?: number;
+        total_videos?: number;
+        total_rewards?: number;
+      } || {};
+      const totalUsers = Number(appStats.total_users) || 0;
+      const totalPosts = Number(appStats.total_posts) || 0;
+      const totalPhotos = Number(appStats.total_photos) || 0;
+      const totalVideos = Number(appStats.total_videos) || 0;
+      const totalRewards = Number(appStats.total_rewards) || 0;
 
       // Calculate total money in USD
       // 1. Sum claimed rewards (CAMLY) and convert to USD
@@ -116,7 +99,7 @@ export const AppHonorBoard = memo(() => {
 
       return {
         totalUsers,
-        totalPosts: posts.length,
+        totalPosts,
         totalPhotos,
         totalVideos,
         totalRewards,
