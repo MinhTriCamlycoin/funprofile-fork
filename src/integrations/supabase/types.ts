@@ -1574,6 +1574,16 @@ export type Database = {
       }
       end_livestream: { Args: { p_livestream_id: string }; Returns: boolean }
       generate_secure_token: { Args: { length?: number }; Returns: string }
+      get_app_stats: {
+        Args: never
+        Returns: {
+          total_photos: number
+          total_posts: number
+          total_rewards: number
+          total_users: number
+          total_videos: number
+        }[]
+      }
       get_user_rewards: {
         Args: { limit_count?: number }
         Returns: {
