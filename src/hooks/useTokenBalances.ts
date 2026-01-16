@@ -22,6 +22,7 @@ const COINGECKO_IDS = {
   BNB: 'binancecoin',
   BTCB: 'bitcoin',
   USDT: 'tether',
+  CAMLY: 'camly-coin',
 };
 
 // ERC20 ABI for balanceOf
@@ -121,8 +122,7 @@ export const useTokenBalances = (options?: UseTokenBalancesOptions) => {
         BNB: data[COINGECKO_IDS.BNB] || lastPrices.BNB || { usd: 700, usd_24h_change: 0 },
         BTCB: data[COINGECKO_IDS.BTCB] || lastPrices.BTCB || { usd: 100000, usd_24h_change: 0 },
         USDT: data[COINGECKO_IDS.USDT] || lastPrices.USDT || { usd: 1, usd_24h_change: 0 },
-        // CAMLY fixed price (not listed on CoinGecko)
-        CAMLY: { usd: 0.000004, usd_24h_change: 0 },
+        CAMLY: data[COINGECKO_IDS.CAMLY] || lastPrices.CAMLY || { usd: 0.000004, usd_24h_change: 0 },
       };
       
       setPrices(priceData);
