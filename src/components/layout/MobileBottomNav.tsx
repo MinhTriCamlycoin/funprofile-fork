@@ -74,12 +74,12 @@ export const MobileBottomNav = memo(() => {
               key={index}
               onClick={item.action}
               aria-label={item.label}
-              className={`flex flex-col items-center justify-center min-w-[56px] min-h-[52px] rounded-2xl transition-all duration-200 touch-manipulation ${
+              className={`flex flex-col items-center justify-center min-w-[56px] min-h-[52px] rounded-2xl transition-all duration-300 touch-manipulation ${
                 item.isCenter
                   ? 'relative -mt-8'
                   : item.path && isActive(item.path)
-                  ? 'text-primary bg-primary/10'
-                  : 'text-muted-foreground active:text-primary active:bg-primary/5'
+                  ? 'text-gold bg-gold/10'
+                  : 'text-muted-foreground hover:text-primary hover:bg-primary/10 active:text-gold active:bg-gold/10'
               }`}
             >
               {item.isCenter ? (
@@ -97,7 +97,11 @@ export const MobileBottomNav = memo(() => {
                 </div>
               ) : (
                 <>
-                  <item.icon className="w-6 h-6 transition-transform" strokeWidth={1.8} />
+                  <item.icon className={`w-6 h-6 transition-all duration-300 ${
+                    item.path && isActive(item.path) 
+                      ? 'drop-shadow-[0_0_8px_hsl(48_96%_53%/0.6)]' 
+                      : ''
+                  }`} strokeWidth={1.8} />
                   <span className="text-[10px] mt-1 font-medium truncate max-w-[52px]">{item.label}</span>
                 </>
               )}

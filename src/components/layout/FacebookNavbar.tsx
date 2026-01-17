@@ -125,7 +125,7 @@ export const FacebookNavbar = () => {
             <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
               <SheetTrigger asChild>
                 <button 
-                  className="fb-icon-btn flex-shrink-0"
+                  className="fun-icon-btn flex-shrink-0"
                   aria-label="Menu"
                 >
                   <Menu className="w-5 h-5" />
@@ -161,15 +161,19 @@ export const FacebookNavbar = () => {
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 aria-label={item.label}
-                className={`flex-1 h-full max-w-[80px] flex items-center justify-center relative transition-colors ${
+                className={`flex-1 h-full max-w-[80px] flex items-center justify-center relative transition-all duration-300 rounded-lg group ${
                   isActive(item.path)
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:bg-secondary rounded-lg'
+                    ? 'text-gold'
+                    : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
                 }`}
               >
-                <item.icon className="w-6 h-6" />
+                <item.icon className={`w-6 h-6 transition-all duration-300 ${
+                  isActive(item.path) 
+                    ? 'drop-shadow-[0_0_8px_hsl(48_96%_53%/0.6)]' 
+                    : 'group-hover:drop-shadow-[0_0_6px_hsl(142_76%_36%/0.5)]'
+                }`} />
                 {isActive(item.path) && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-gold to-primary rounded-t-full" />
                 )}
               </button>
             ))}
@@ -215,7 +219,7 @@ export const FacebookNavbar = () => {
 
           {/* Chat/Messenger */}
           <button 
-            className="fb-icon-btn" 
+            className="fun-icon-btn" 
             aria-label="Messenger"
             onClick={() => navigate('/chat')}
           >
@@ -230,11 +234,11 @@ export const FacebookNavbar = () => {
 
               {/* Wallet */}
               <button 
-                className="fb-icon-btn" 
+                className="fun-icon-btn-gold" 
                 aria-label="Wallet"
                 onClick={() => navigate('/wallet')}
               >
-                <Wallet className="w-5 h-5 text-gold drop-shadow-[0_0_6px_hsl(var(--gold-glow))]" />
+                <Wallet className="w-5 h-5 text-gold drop-shadow-[0_0_6px_hsl(48_96%_53%/0.5)] transition-all duration-300" />
               </button>
 
               {/* Avatar */}

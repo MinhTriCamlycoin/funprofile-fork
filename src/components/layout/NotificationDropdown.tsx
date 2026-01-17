@@ -241,16 +241,16 @@ export const NotificationDropdown = () => {
         size="icon" 
         onClick={handleBellClick}
         className={cn(
-          "h-8 w-8 sm:h-10 sm:w-10 relative hover:bg-primary [&:hover_svg]:text-white transition-all duration-300",
+          "h-8 w-8 sm:h-10 sm:w-10 relative hover:bg-gold/20 transition-all duration-300 group",
           hasNewNotification && "animate-pulse"
         )} 
         aria-label="Thông báo"
       >
         <Bell className={cn(
-          "w-4 h-4 text-gold transition-all duration-300",
+          "w-4 h-4 text-gold transition-all duration-300 group-hover:drop-shadow-[0_0_12px_hsl(48_96%_53%/0.7)]",
           hasNewNotification 
-            ? "drop-shadow-[0_0_12px_hsl(var(--gold-glow))] animate-bounce" 
-            : "drop-shadow-[0_0_6px_hsl(var(--gold-glow))]"
+            ? "drop-shadow-[0_0_12px_hsl(48_96%_53%/0.6)] animate-bounce" 
+            : "drop-shadow-[0_0_6px_hsl(48_96%_53%/0.5)]"
         )} />
         {unreadCount > 0 && (
           <span className={cn(
@@ -274,16 +274,16 @@ export const NotificationDropdown = () => {
           variant="ghost" 
           size="icon" 
           className={cn(
-            "h-10 w-10 sm:h-12 sm:w-12 relative hover:bg-primary [&:hover_svg]:text-white transition-all duration-300",
+            "h-10 w-10 sm:h-12 sm:w-12 relative hover:bg-gold/20 transition-all duration-300 group",
             hasNewNotification && "animate-pulse"
           )} 
           aria-label="Thông báo"
         >
           <Bell className={cn(
-            "w-12 h-12 text-gold transition-all duration-300",
+            "w-5 h-5 text-gold transition-all duration-300 group-hover:drop-shadow-[0_0_12px_hsl(48_96%_53%/0.7)]",
             hasNewNotification 
-              ? "drop-shadow-[0_0_12px_hsl(var(--gold-glow))] animate-bounce" 
-              : "drop-shadow-[0_0_6px_hsl(var(--gold-glow))]"
+              ? "drop-shadow-[0_0_12px_hsl(48_96%_53%/0.6)] animate-bounce" 
+              : "drop-shadow-[0_0_6px_hsl(48_96%_53%/0.5)]"
           )} />
           {unreadCount > 0 && (
             <span className={cn(

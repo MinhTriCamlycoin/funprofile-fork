@@ -161,10 +161,10 @@ export const InlineSearch = () => {
       {/* Search Input Container */}
       <div
         className={cn(
-          "flex items-center gap-2 rounded-full transition-all duration-300 ease-out",
+          "flex items-center gap-2 rounded-full transition-all duration-300 ease-out group",
           isExpanded
             ? "bg-background border border-border shadow-lg w-[280px] sm:w-[320px]"
-            : "bg-secondary hover:bg-secondary/80 w-10 h-10 sm:w-auto sm:px-3 cursor-pointer"
+            : "bg-secondary hover:bg-primary/10 w-10 h-10 sm:w-auto sm:px-3 cursor-pointer"
         )}
         onClick={() => !isExpanded && setIsExpanded(true)}
       >
@@ -198,8 +198,8 @@ export const InlineSearch = () => {
           </>
         ) : (
           <>
-            <Search className="w-5 h-5 text-muted-foreground flex-shrink-0 mx-auto sm:mx-0" />
-            <span className="hidden sm:block text-sm text-muted-foreground">
+            <Search className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:drop-shadow-[0_0_6px_hsl(142_76%_36%/0.5)] transition-all duration-300 flex-shrink-0 mx-auto sm:mx-0" />
+            <span className="hidden sm:block text-sm text-muted-foreground group-hover:text-primary transition-colors duration-300">
               {t('search')}
             </span>
           </>

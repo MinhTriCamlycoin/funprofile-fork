@@ -379,3 +379,67 @@ html {
   background: hsl(142 76% 36% / 0.1);
   border-color: hsl(142 76% 36%);
 }
+
+/* ================================ */
+/* FUN Profile Icon Navigation     */
+/* Green → Gold → White States     */
+/* ================================ */
+
+/* FUN Icon - Default state */
+.fun-nav-icon {
+  @apply text-muted-foreground transition-all duration-300;
+}
+
+/* FUN Icon - Hover state (Green glow) */
+.fun-nav-icon:hover {
+  @apply text-primary;
+  filter: drop-shadow(0 0 8px hsl(142 76% 36% / 0.5));
+}
+
+/* FUN Icon - Active state (Gold glow) */
+.fun-nav-icon.active,
+.fun-nav-icon:active {
+  @apply text-gold;
+  filter: drop-shadow(0 0 10px hsl(48 96% 53% / 0.6));
+}
+
+/* FUN Icon Button - Container */
+.fun-icon-btn {
+  @apply w-10 h-10 rounded-full bg-secondary flex items-center justify-center transition-all duration-300;
+}
+
+/* FUN Icon Button - Hover (Green bg, white icon) */
+.fun-icon-btn:hover {
+  @apply bg-primary;
+}
+
+.fun-icon-btn:hover svg {
+  @apply text-white;
+  filter: drop-shadow(0 0 6px hsl(0 0% 100% / 0.5));
+}
+
+/* FUN Icon Button - Active/Pressed (Gold) */
+.fun-icon-btn:active {
+  @apply bg-gold scale-95;
+}
+
+.fun-icon-btn:active svg {
+  @apply text-foreground;
+}
+
+/* FUN Icon Button - Gold variant (for Wallet, Notification) */
+.fun-icon-btn-gold {
+  @apply w-10 h-10 rounded-full bg-secondary flex items-center justify-center transition-all duration-300;
+}
+
+.fun-icon-btn-gold:hover {
+  @apply bg-gold/20;
+}
+
+.fun-icon-btn-gold:hover svg {
+  filter: drop-shadow(0 0 12px hsl(48 96% 53% / 0.7));
+}
+
+.fun-icon-btn-gold:active {
+  @apply bg-gold/30 scale-95;
+}
