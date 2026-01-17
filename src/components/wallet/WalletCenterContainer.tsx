@@ -88,6 +88,12 @@ const WalletCenterContainer = () => {
     customAddress: activeWalletAddress as `0x${string}` | undefined,
   });
 
+  // Get CAMLY price from tokens for claimable calculation (uses real-time CoinGecko price)
+  const camlyPrice = useMemo(() => {
+    const camlyToken = tokens.find(t => t.symbol === 'CAMLY');
+    return camlyToken?.price || 0;
+  }, [tokens]);
+
   // CRITICAL: On mount, if user explicitly disconnected before, disconnect wagmi too
   useEffect(() => {
     const wasDisconnected = localStorage.getItem(WALLET_DISCONNECTED_KEY) === 'true';
@@ -753,7 +759,7 @@ const WalletCenterContainer = () => {
               <Gift className={`w-6 h-6 ${config.labelColor}`} />
               <div className="flex flex-col">
                 <span className={`font-semibold ${config.labelColor}`}>
-                  Claimable: {formatNumber(claimableReward, 0)} CAMLY (~{formatUsd(claimableReward * 0.000003)})
+                  Claimable: {formatNumber(claimableReward, 0)} CAMLY (~{formatUsd(claimableReward * camlyPrice)})
                 </span>
                 <span className={`text-xs ${config.labelColor} opacity-80`}>
                   Trạng thái: {config.label}
