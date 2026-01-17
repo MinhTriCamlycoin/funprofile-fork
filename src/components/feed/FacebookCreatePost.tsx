@@ -38,8 +38,10 @@ interface MediaItem {
   type: 'image' | 'video';
 }
 
+const MAX_CONTENT_LENGTH = 20000;
+
 const postSchema = z.object({
-  content: z.string().max(10000, 'Content must be less than 10000 characters'),
+  content: z.string().max(MAX_CONTENT_LENGTH, `Nội dung tối đa ${MAX_CONTENT_LENGTH.toLocaleString()} ký tự`),
 });
 
 export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) => {
@@ -127,12 +129,12 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       }
 
       if (isImage && file.size > FILE_LIMITS.IMAGE_MAX_SIZE) {
-        toast.error(`Ảnh "${file.name}" phải nhỏ hơn 20MB`);
+        toast.error(`Ảnh "${file.name}" phải nhỏ hơn 100MB`);
         continue;
       }
 
       if (isVideo && file.size > FILE_LIMITS.VIDEO_MAX_SIZE) {
-        toast.error(`Video "${file.name}" phải nhỏ hơn 1GB`);
+        toast.error(`Video "${file.name}" phải nhỏ hơn 2GB`);
         continue;
       }
 
@@ -140,7 +142,7 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
         if (isVideo) {
           const duration = await getVideoDuration(file);
           if (duration > FILE_LIMITS.VIDEO_MAX_DURATION) {
-            toast.error(`Video "${file.name}" phải ngắn hơn 15 phút`);
+            toast.error(`Video "${file.name}" phải ngắn hơn 120 phút`);
             continue;
           }
           // Use Uppy for video uploads - set pending file and start upload
@@ -205,7 +207,37 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
     setContent((prev) => prev + emoji);
   };
 
+  // Submit step state for detailed feedback
+  const [submitStep, setSubmitStep] = useState<'idle' | 'auth' | 'prepare_media' | 'saving' | 'done'>('idle');
+  const submitAbortRef = useRef<AbortController | null>(null);
+
+  const getSubmitButtonText = () => {
+    if (isVideoUploading) return 'Đang upload video...';
+    switch (submitStep) {
+      case 'auth': return 'Đang xác thực...';
+      case 'prepare_media': return 'Đang chuẩn bị media...';
+      case 'saving': return 'Đang lưu bài viết...';
+      default: return loading ? 'Đang đăng...' : 'Đăng';
+    }
+  };
+
+  const handleCancelSubmit = () => {
+    if (submitAbortRef.current) {
+      submitAbortRef.current.abort();
+    }
+    setLoading(false);
+    setSubmitStep('idle');
+    toast.info('Đã huỷ đăng bài');
+  };
+
   const handleSubmit = async () => {
+    console.log('[CreatePost] === SUBMIT START ===', {
+      contentLength: content.length,
+      mediaCount: mediaItems.length,
+      hasUppyVideo: !!uppyVideoResult,
+      isVideoUploading,
+    });
+    
     if (!content.trim() && mediaItems.length === 0 && !uppyVideoResult) {
       toast.error('Vui lòng thêm nội dung hoặc media');
       return;
@@ -217,6 +249,12 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       return;
     }
 
+    // Check content length before validation
+    if (content.length > MAX_CONTENT_LENGTH) {
+      toast.error(`Nội dung quá dài (${content.length.toLocaleString()}/${MAX_CONTENT_LENGTH.toLocaleString()} ký tự)`);
+      return;
+    }
+
     // Validate content length
     const validation = postSchema.safeParse({ content: content.trim() });
     if (!validation.success) {
@@ -224,11 +262,66 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       return;
     }
 
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Chưa đăng nhập');
+    // Create abort controller for this submit
+    const abortController = new AbortController();
+    submitAbortRef.current = abortController;
+    
+    // Watchdog timeout - auto cancel after 90 seconds
+    const watchdogTimeout = setTimeout(() => {
+      console.error('[CreatePost] Watchdog timeout triggered (90s)');
+      abortController.abort();
+      setLoading(false);
+      setSubmitStep('idle');
+      toast.error('Đăng bài bị timeout, vui lòng thử lại');
+    }, 90000);
 
+    setLoading(true);
+    setSubmitStep('auth');
+    console.log('[CreatePost] Step: auth - Getting session...');
+    
+    try {
+      // Check if aborted
+      if (abortController.signal.aborted) throw new Error('Đã huỷ');
+      
+      // Get session with 5 second timeout
+      const authStartTime = Date.now();
+      let session;
+      try {
+        const sessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('getSession timeout (5s)')), 5000)
+          )
+        ]);
+        session = sessionResult.data.session;
+        console.log('[CreatePost] getSession completed in', Date.now() - authStartTime, 'ms');
+      } catch (authError: any) {
+        console.error('[CreatePost] getSession error:', authError.message);
+        // Try refresh session as fallback
+        console.log('[CreatePost] Trying refreshSession...');
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (!refreshData.session) {
+          throw new Error('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
+        }
+        session = refreshData.session;
+        console.log('[CreatePost] refreshSession succeeded');
+      }
+      
+      if (!session) {
+        console.log('[CreatePost] No session found, trying refresh...');
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (!refreshData.session) {
+          throw new Error('Chưa đăng nhập');
+        }
+        session = refreshData.session;
+      }
+
+      console.log('[CreatePost] Auth OK, user:', session.user.id.substring(0, 8) + '...');
+      setSubmitStep('prepare_media');
+      console.log('[CreatePost] Step: prepare_media');
+      
+      if (abortController.signal.aborted) throw new Error('Đã huỷ');
+      
       // Upload all media items (images only - videos handled by Uppy)
       const mediaUrls: Array<{ url: string; type: 'image' | 'video' }> = [];
       
@@ -238,14 +331,15 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
           url: uppyVideoResult.url,
           type: 'video',
         });
+        console.log('[CreatePost] Added video URL:', uppyVideoResult.url);
       }
       
       for (const item of mediaItems) {
+        if (abortController.signal.aborted) throw new Error('Đã huỷ');
+        
         if (item.type === 'video') {
-          // Skip videos - they're handled by Uppy component now
           continue;
         } else {
-          // Use R2 for images
           const result = await uploadToR2(item.file, 'posts');
           mediaUrls.push({
             url: result.url,
@@ -254,26 +348,64 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
         }
       }
 
-      // Reset video upload state
+      console.log('[CreatePost] Media URLs prepared:', mediaUrls.length);
+      
+      if (abortController.signal.aborted) throw new Error('Đã huỷ');
+
+      // For backward compatibility
+      const firstImage = mediaUrls.find((m) => m.type === 'image');
+      const firstVideo = mediaUrls.find((m) => m.type === 'video');
+
+      console.log('[CreatePost] Step: saving - Calling edge function...');
+      setSubmitStep('saving');
+
+      // Call edge function with timeout
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-post`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          content: content.trim() || '',
+          media_urls: mediaUrls,
+          image_url: firstImage?.url || null,
+          video_url: firstVideo?.url || null,
+        }),
+        signal: abortController.signal,
+      });
+
+      console.log('[CreatePost] Edge function response status:', response.status);
+
+      let result;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        console.error('[CreatePost] Failed to parse response JSON:', jsonError);
+        // If status OK but can't parse JSON, assume success
+        if (response.ok) {
+          console.log('[CreatePost] Assuming success despite JSON parse error');
+          result = { ok: true };
+        } else {
+          throw new Error('Lỗi kết nối với server');
+        }
+      }
+      
+      if (!response.ok) {
+        console.error('[CreatePost] Edge function error:', result);
+        throw new Error(result.error || 'Không thể lưu bài viết');
+      }
+
+      console.log('[CreatePost] Success!', result);
+      setSubmitStep('done');
+
+      // Reset video upload state AFTER successful insert
       setVideoUploadState('idle');
       setVideoUploadProgress(0);
       setCurrentVideoId(undefined);
       setPendingVideoFile(null);
       setUppyVideoResult(null);
-
-      // For backward compatibility, also set first image/video in legacy fields
-      const firstImage = mediaUrls.find((m) => m.type === 'image');
-      const firstVideo = mediaUrls.find((m) => m.type === 'video');
-
-      const { error } = await supabase.from('posts').insert({
-        user_id: user.id,
-        content: content.trim() || '',
-        image_url: firstImage?.url || null,
-        video_url: firstVideo?.url || null,
-        media_urls: mediaUrls,
-      });
-
-      if (error) throw error;
 
       // Cleanup
       mediaItems.forEach((item) => URL.revokeObjectURL(item.preview));
@@ -284,10 +416,19 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
       toast.success('Đã đăng bài viết!');
       onPostCreated();
     } catch (error: any) {
+      if (error.name === 'AbortError' || error.message === 'Đã huỷ') {
+        console.log('[CreatePost] Aborted');
+        // Don't show error for user-initiated cancel
+      } else {
+        console.error('[CreatePost] Error:', error.message, error);
+        toast.error(error.message || 'Không thể đăng bài');
+      }
       setVideoUploadState('idle');
-      toast.error(error.message || 'Không thể đăng bài');
     } finally {
+      clearTimeout(watchdogTimeout);
       setLoading(false);
+      setSubmitStep('idle');
+      submitAbortRef.current = null;
     }
   };
 
@@ -404,6 +545,14 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
               />
               <div className="absolute bottom-2 right-2">
                 <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              </div>
+              {/* Character Counter */}
+              <div className={`text-xs text-right mt-1 pr-1 ${
+                content.length > MAX_CONTENT_LENGTH ? 'text-destructive font-semibold' :
+                content.length > MAX_CONTENT_LENGTH * 0.9 ? 'text-yellow-500' :
+                content.length > MAX_CONTENT_LENGTH * 0.8 ? 'text-yellow-600/70' : 'text-muted-foreground'
+              }`}>
+                {content.length.toLocaleString()}/{MAX_CONTENT_LENGTH.toLocaleString()}
               </div>
             </div>
 
@@ -610,14 +759,25 @@ export const FacebookCreatePost = ({ onPostCreated }: FacebookCreatePostProps) =
 
           {/* Submit Button */}
           <div className="p-4 border-t border-border shrink-0">
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || isVideoUploading || (!content.trim() && mediaItems.length === 0 && !uppyVideoResult)}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isVideoUploading ? 'Đang upload video...' : loading ? 'Đang đăng...' : 'Đăng'}
-            </Button>
+            <div className="flex gap-2">
+              {loading && (
+                <Button
+                  variant="outline"
+                  onClick={handleCancelSubmit}
+                  className="shrink-0"
+                >
+                  Huỷ
+                </Button>
+              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={loading || isVideoUploading || content.length > MAX_CONTENT_LENGTH || (!content.trim() && mediaItems.length === 0 && !uppyVideoResult)}
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              >
+                {(loading || isVideoUploading) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {getSubmitButtonText()}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

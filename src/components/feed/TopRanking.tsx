@@ -1,16 +1,18 @@
-import { useEffect, useState, memo } from "react";
+import { useEffect, useState, memo, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
+import { getNavbarLogoUrl } from "@/lib/staticImageOptimizer";
 
 interface LeaderboardUser {
   id: string;
   username: string;
   avatar_url: string;
   total_reward: number;
+  today_reward: number;
 }
 
 export const TopRanking = memo(() => {
@@ -22,10 +24,10 @@ export const TopRanking = memo(() => {
     fetchLeaderboards();
   }, []);
 
-  // Optimized: Single RPC call instead of N+1 queries
+  // Optimized: Single RPC call with daily limits (V2)
   const fetchLeaderboards = async () => {
     try {
-      const { data, error } = await supabase.rpc("get_user_rewards", { limit_count: 6 });
+      const { data, error } = await supabase.rpc("get_user_rewards_v2", { limit_count: 6 });
 
       if (error) throw error;
 
@@ -36,6 +38,7 @@ export const TopRanking = memo(() => {
             username: user.username,
             avatar_url: user.avatar_url,
             total_reward: Number(user.total_reward),
+            today_reward: Number(user.today_reward) || 0,
           })),
         );
       }
@@ -104,7 +107,7 @@ export const TopRanking = memo(() => {
           <div className="inline-block">
             <div className="relative">
               <img
-                src="/fun-profile-logo-40.webp"
+                src={getNavbarLogoUrl('/fun-profile-logo-40.webp')}
                 alt="Fun Profile Web3"
                 width={48}
                 height={48}

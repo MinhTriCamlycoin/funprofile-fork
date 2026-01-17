@@ -496,6 +496,57 @@ export type Database = {
         }
         Relationships: []
       }
+      livestreams: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          is_eligible: boolean | null
+          started_at: string
+          stream_id: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          is_eligible?: boolean | null
+          started_at?: string
+          stream_id?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          is_eligible?: boolean | null
+          started_at?: string
+          stream_id?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "livestreams_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestreams_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string | null
@@ -1022,6 +1073,7 @@ export type Database = {
           law_of_light_accepted_at: string | null
           oauth_provider: string | null
           pending_reward: number
+          pinned_post_id: string | null
           registered_from: string | null
           reward_status: string
           soul_level: number
@@ -1060,6 +1112,7 @@ export type Database = {
           law_of_light_accepted_at?: string | null
           oauth_provider?: string | null
           pending_reward?: number
+          pinned_post_id?: string | null
           registered_from?: string | null
           reward_status?: string
           soul_level?: number
@@ -1098,6 +1151,7 @@ export type Database = {
           law_of_light_accepted_at?: string | null
           oauth_provider?: string | null
           pending_reward?: number
+          pinned_post_id?: string | null
           registered_from?: string | null
           reward_status?: string
           soul_level?: number
@@ -1106,7 +1160,15 @@ export type Database = {
           username?: string
           wallet_address?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_pinned_post_id_fkey"
+            columns: ["pinned_post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reactions: {
         Row: {
@@ -1510,7 +1572,18 @@ export type Database = {
         Args: { bucket_name: string; object_path: string }
         Returns: undefined
       }
+      end_livestream: { Args: { p_livestream_id: string }; Returns: boolean }
       generate_secure_token: { Args: { length?: number }; Returns: string }
+      get_app_stats: {
+        Args: never
+        Returns: {
+          total_photos: number
+          total_posts: number
+          total_rewards: number
+          total_users: number
+          total_videos: number
+        }[]
+      }
       get_user_rewards: {
         Args: { limit_count?: number }
         Returns: {
@@ -1522,6 +1595,23 @@ export type Database = {
           reactions_count: number
           reactions_on_posts: number
           shares_count: number
+          total_reward: number
+          username: string
+        }[]
+      }
+      get_user_rewards_v2: {
+        Args: { limit_count?: number }
+        Returns: {
+          avatar_url: string
+          comments_count: number
+          friends_count: number
+          id: string
+          livestreams_count: number
+          posts_count: number
+          reactions_count: number
+          reactions_on_posts: number
+          shares_count: number
+          today_reward: number
           total_reward: number
           username: string
         }[]

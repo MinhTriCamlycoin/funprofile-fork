@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect, VideoHTMLAttributes, memo } from 'react';
+import { useState, useRef, useEffect, VideoHTMLAttributes, memo, lazy, Suspense } from 'react';
 import { cn } from '@/lib/utils';
 import { isSlowConnection, prefersReducedMotion } from '@/utils/performanceOptimizer';
 import { isStreamUrl } from '@/utils/streamUpload';
-import { StreamPlayer } from './StreamPlayer';
+
+// Lazy load StreamPlayer to reduce initial bundle size (~154KB savings)
+const StreamPlayer = lazy(() => import('./StreamPlayer').then(mod => ({ default: mod.StreamPlayer })));
 
 interface LazyVideoProps extends VideoHTMLAttributes<HTMLVideoElement> {
   src: string;
@@ -132,7 +134,8 @@ export const LazyVideo = memo(({
               src={effectivePoster}
               alt="Video thumbnail"
               className="w-full h-full object-cover"
-              loading="lazy"
+              fetchPriority="high"
+              decoding="async"
               onError={(e) => {
                 // Hide broken poster
                 (e.target as HTMLImageElement).style.display = 'none';
@@ -147,20 +150,22 @@ export const LazyVideo = memo(({
       {/* Video element */}
       {isInView && (
         isStream ? (
-          <StreamPlayer
-            src={src}
-            poster={effectivePoster}
-            className={cn(
-              'w-full h-full transition-opacity duration-300',
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            )}
-            autoPlay={autoPlay && !reducedMotion}
-            muted={muted}
-            loop={loop}
-            controls={showControls}
-            onError={handleStreamError}
-            onReady={handleStreamReady}
-          />
+          <Suspense fallback={<div className="w-full h-full bg-muted animate-pulse" />}>
+            <StreamPlayer
+              src={src}
+              poster={effectivePoster}
+              className={cn(
+                'w-full h-full transition-opacity duration-300',
+                isLoaded ? 'opacity-100' : 'opacity-0'
+              )}
+              autoPlay={autoPlay && !reducedMotion}
+              muted={muted}
+              loop={loop}
+              controls={showControls}
+              onError={handleStreamError}
+              onReady={handleStreamReady}
+            />
+          </Suspense>
         ) : (
           <video
             ref={videoRef}
