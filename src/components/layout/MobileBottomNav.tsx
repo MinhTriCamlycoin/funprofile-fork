@@ -74,7 +74,7 @@ export const MobileBottomNav = memo(() => {
               key={index}
               onClick={item.action}
               aria-label={item.label}
-              className={`flex flex-col items-center justify-center min-w-[56px] min-h-[52px] rounded-2xl transition-all duration-300 touch-manipulation ${
+              className={`flex flex-col items-center justify-center min-w-[56px] min-h-[52px] rounded-2xl transition-all duration-300 touch-manipulation group ${
                 item.isCenter
                   ? 'relative -mt-8'
                   : item.path && isActive(item.path)
@@ -96,11 +96,11 @@ export const MobileBottomNav = memo(() => {
                   <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 bg-amber-200 rounded-full animate-pulse" />
                 </div>
               ) : (
-                <>
+              <>
                   <item.icon className={`w-6 h-6 transition-all duration-300 ${
                     item.path && isActive(item.path) 
                       ? 'drop-shadow-[0_0_8px_hsl(48_96%_53%/0.6)]' 
-                      : ''
+                      : 'group-hover:drop-shadow-[0_0_6px_hsl(142_76%_36%/0.5)]'
                   }`} strokeWidth={1.8} />
                   <span className="text-[10px] mt-1 font-medium truncate max-w-[52px]">{item.label}</span>
                 </>

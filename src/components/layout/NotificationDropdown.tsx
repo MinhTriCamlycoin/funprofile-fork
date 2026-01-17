@@ -274,7 +274,7 @@ export const NotificationDropdown = () => {
           variant="ghost" 
           size="icon" 
           className={cn(
-            "h-10 w-10 sm:h-12 sm:w-12 relative hover:bg-gold/20 transition-all duration-300 group",
+            "h-10 w-10 relative hover:bg-gold/20 transition-all duration-300 group",
             hasNewNotification && "animate-pulse"
           )} 
           aria-label="Thông báo"
