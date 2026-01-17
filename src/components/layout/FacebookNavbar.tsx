@@ -219,11 +219,11 @@ export const FacebookNavbar = () => {
 
           {/* Chat/Messenger */}
           <button 
-            className="fun-icon-btn" 
+            className="fun-icon-btn group" 
             aria-label="Messenger"
             onClick={() => navigate('/chat')}
           >
-            <MessageCircle className="w-5 h-5" />
+            <MessageCircle className="w-5 h-5 text-muted-foreground group-hover:text-white transition-all duration-300" />
           </button>
 
           {/* Desktop only: Notification, Wallet, Avatar */}
@@ -234,11 +234,11 @@ export const FacebookNavbar = () => {
 
               {/* Wallet */}
               <button 
-                className="fun-icon-btn-gold" 
+                className="fun-icon-btn-gold group" 
                 aria-label="Wallet"
                 onClick={() => navigate('/wallet')}
               >
-                <Wallet className="w-5 h-5 text-gold drop-shadow-[0_0_6px_hsl(48_96%_53%/0.5)] transition-all duration-300" />
+                <Wallet className="w-5 h-5 text-gold drop-shadow-[0_0_6px_hsl(48_96%_53%/0.5)] group-hover:drop-shadow-[0_0_12px_hsl(48_96%_53%/0.8)] transition-all duration-300" />
               </button>
 
               {/* Avatar */}
