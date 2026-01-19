@@ -33,7 +33,12 @@ const REACTION_ICONS: Record<string, { icon: string; color: string }> = {
   angry: { icon: '😠', color: 'text-orange-500' },
 };
 
-export const NotificationDropdown = () => {
+interface NotificationDropdownProps {
+  centerNavStyle?: boolean;
+  isActiveRoute?: boolean;
+}
+
+export const NotificationDropdown = ({ centerNavStyle = false, isActiveRoute = false }: NotificationDropdownProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -267,6 +272,115 @@ export const NotificationDropdown = () => {
   }
 
   // Desktop: Show popover dropdown
+  // If centerNavStyle is true, use the same styling as other nav items
+  if (centerNavStyle) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            className={cn(
+              "flex-1 h-full max-w-[100px] flex items-center justify-center relative transition-all duration-300 rounded-lg group",
+              isActiveRoute
+                ? 'text-primary-foreground bg-primary'
+                : 'text-foreground hover:text-primary hover:bg-primary/10'
+            )}
+            aria-label="Thông báo"
+          >
+            <Bell className={cn(
+              "w-6 h-6 transition-all duration-300",
+              !isActiveRoute && "group-hover:drop-shadow-[0_0_6px_hsl(142_76%_36%/0.5)]"
+            )} />
+            {unreadCount > 0 && (
+              <span className={cn(
+                "absolute top-1 right-2 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold transition-all duration-300",
+                hasNewNotification 
+                  ? "bg-gold text-black shadow-[0_0_15px_hsl(var(--gold-glow))] animate-pulse scale-110" 
+                  : "bg-destructive text-destructive-foreground"
+              )}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+            {isActiveRoute && (
+              <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-gold to-primary rounded-t-full" />
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 sm:w-96 p-0 border-gold/20 shadow-[0_0_20px_hsl(var(--gold-glow)/0.2)]" align="center">
+          <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-gold/5 to-transparent">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <Bell className="w-4 h-4 text-gold" />
+              Thông báo
+            </h3>
+            {unreadCount > 0 && (
+              <button 
+                onClick={markAllAsRead}
+                className="text-xs text-gold hover:text-gold/80 hover:underline transition-colors"
+              >
+                Đánh dấu đã đọc ({unreadCount})
+              </button>
+            )}
+          </div>
+          <ScrollArea className="h-[400px] sm:h-[500px]">
+            {notifications.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>Chưa có thông báo nào</p>
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <button
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={cn(
+                    "w-full p-3 sm:p-4 flex items-start gap-3 hover:bg-muted/50 transition-all duration-200 border-b border-border/30 text-left",
+                    !notification.read && "bg-gradient-to-r from-gold/10 via-gold/5 to-transparent shadow-[inset_0_0_20px_hsl(var(--gold-glow)/0.1)]"
+                  )}
+                >
+                  <div className="relative flex-shrink-0">
+                    <Avatar className={cn(
+                      "w-10 h-10 sm:w-12 sm:h-12 border-2 transition-all",
+                      !notification.read ? "border-gold/50 shadow-[0_0_10px_hsl(var(--gold-glow)/0.3)]" : "border-transparent"
+                    )}>
+                      {notification.actor?.avatar_url && (
+                        <AvatarImage src={notification.actor.avatar_url} />
+                      )}
+                      <AvatarFallback className="bg-primary/20 text-primary">
+                        {notification.actor?.username?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-card rounded-full flex items-center justify-center border border-border shadow-sm">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "text-sm leading-relaxed",
+                      !notification.read ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      {getNotificationText(notification.type, notification.actor?.username || 'Người dùng')}
+                    </p>
+                    <p className={cn(
+                      "text-xs mt-1",
+                      !notification.read ? "text-gold" : "text-muted-foreground"
+                    )}>
+                      {formatDistanceToNow(new Date(notification.created_at), {
+                        addSuffix: true,
+                        locale: vi
+                      })}
+                    </p>
+                  </div>
+                  {!notification.read && (
+                    <div className="w-2.5 h-2.5 bg-gold rounded-full flex-shrink-0 mt-2 shadow-[0_0_8px_hsl(var(--gold-glow))] animate-pulse" />
+                  )}
+                </button>
+              ))
+            )}
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
