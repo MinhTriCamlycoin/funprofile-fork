@@ -71,10 +71,13 @@ export const FacebookNavbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Navigation items with icons for Home and Friends
+  // Navigation items for center nav (Desktop only)
   const iconNavItems = [
     { icon: Home, path: '/', label: t('home') },
     { icon: Users, path: '/friends', label: t('friends') },
+    { icon: MessageCircle, path: '/chat', label: 'Chat' },
+    // Bell (Notification) is handled separately with NotificationDropdown component
+    { icon: Wallet, path: '/wallet', label: 'Wallet' },
   ];
 
   return (
@@ -115,8 +118,8 @@ export const FacebookNavbar = () => {
         </div>
 
         {/* Center Section - Navigation (Desktop only, hidden on tablet) */}
-        <nav className="hidden lg:flex items-center justify-center flex-1 max-w-[400px] h-full gap-2">
-          {/* Icon Navigation Items (Home, Friends) */}
+        <nav className="hidden lg:flex items-center justify-center flex-1 max-w-[600px] h-full gap-1">
+          {/* Icon Navigation Items (Home, Friends, Chat, Wallet) */}
           {iconNavItems.map((item) => (
             <button
               key={item.path}
@@ -138,6 +141,9 @@ export const FacebookNavbar = () => {
               )}
             </button>
           ))}
+          
+          {/* Notification button with same styling - integrated NotificationDropdown */}
+          <NotificationDropdown centerNavStyle isActiveRoute={isActive('/notifications')} />
         </nav>
 
         {/* Right Section - Actions */}
@@ -147,8 +153,8 @@ export const FacebookNavbar = () => {
             <InlineSearch />
           </div>
 
-          {/* Mobile/Tablet: Wallet icon | Desktop: Chat icon */}
-          {isMobileOrTablet ? (
+          {/* Mobile/Tablet: Wallet icon */}
+          {isMobileOrTablet && (
             <button 
               className="fun-icon-btn-gold group" 
               aria-label="Wallet"
@@ -156,45 +162,25 @@ export const FacebookNavbar = () => {
             >
               <Wallet className="w-5 h-5 text-gold drop-shadow-[0_0_6px_hsl(48_96%_53%/0.5)] group-hover:drop-shadow-[0_0_12px_hsl(48_96%_53%/0.8)] transition-all duration-300" />
             </button>
-          ) : (
-            <button 
-              className="fun-icon-btn group" 
-              aria-label="Messenger"
-              onClick={() => navigate('/chat')}
-            >
-              <MessageCircle className="w-5 h-5 text-muted-foreground group-hover:text-white transition-all duration-300" />
-            </button>
           )}
 
-          {/* Desktop only: Notification, Wallet, Avatar */}
+          {/* Notification for mobile/tablet */}
+          {isMobileOrTablet && <NotificationDropdown />}
+
+          {/* Desktop only: Avatar */}
           {!isMobileOrTablet && isLoggedIn && (
-            <>
-              {/* Notification */}
-              <NotificationDropdown />
-
-              {/* Wallet */}
-              <button 
-                className="fun-icon-btn-gold group" 
-                aria-label="Wallet"
-                onClick={() => navigate('/wallet')}
-              >
-                <Wallet className="w-5 h-5 text-gold drop-shadow-[0_0_6px_hsl(48_96%_53%/0.5)] group-hover:drop-shadow-[0_0_12px_hsl(48_96%_53%/0.8)] transition-all duration-300" />
-              </button>
-
-              {/* Avatar */}
-              <button
-                onClick={() => navigate(`/profile/${currentUserId}`)}
-                className="flex-shrink-0"
-                aria-label="Profile"
-              >
-                <Avatar className="w-9 h-9 border-2 border-gold/30 hover:border-gold transition-colors cursor-pointer">
-                  <AvatarImage src={profile?.avatar_url || ''} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-sm">
-                    {profile?.username?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </>
+            <button
+              onClick={() => navigate(`/profile/${currentUserId}`)}
+              className="flex-shrink-0"
+              aria-label="Profile"
+            >
+              <Avatar className="w-9 h-9 border-2 border-gold/30 hover:border-gold transition-colors cursor-pointer">
+                <AvatarImage src={profile?.avatar_url || ''} />
+                <AvatarFallback className="bg-primary/20 text-primary text-sm">
+                  {profile?.username?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </button>
           )}
 
           {/* Sign In Button - Only show when not logged in */}
