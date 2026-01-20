@@ -308,6 +308,10 @@ export const translations = {
 
     // Law of Light
     lawSkip: 'Browse without registering',
+
+    // Guest mode
+    orContinueAs: 'Or continue as',
+    viewAsGuest: 'View as a Guest',
   },
   
   vi: {
@@ -619,6 +623,10 @@ export const translations = {
 
     // Law of Light
     lawSkip: 'Vào xem mà không đăng ký',
+
+    // Guest mode
+    orContinueAs: 'Hoặc tiếp tục với',
+    viewAsGuest: 'Xem với tư cách Khách',
   },
 } as const;
 

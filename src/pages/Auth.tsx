@@ -5,6 +5,8 @@ import { UnifiedAuthForm } from '@/components/auth/UnifiedAuthForm';
 import { useLanguage } from '@/i18n/LanguageContext';
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 import { getAuthLogoUrl, getSponsoredLogoUrl } from '@/lib/staticImageOptimizer';
+import { Button } from '@/components/ui/button';
+import { Eye } from 'lucide-react';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -135,7 +137,27 @@ const Auth = () => {
         <div className="w-full max-w-md mx-auto min-h-[520px]">
           <UnifiedAuthForm />
           
-          <p className="text-center mt-6 text-sm text-muted-foreground">
+          {/* Guest Mode Option */}
+          <div className="mt-6 text-center">
+            <div className="relative flex items-center gap-4 py-2">
+              <div className="flex-1 border-t border-muted" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                {t('orContinueAs')}
+              </span>
+              <div className="flex-1 border-t border-muted" />
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="w-full mt-3 gap-2 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+            >
+              <Eye size={18} />
+              {t('viewAsGuest')}
+            </Button>
+          </div>
+          
+          <p className="text-center mt-4 text-sm text-muted-foreground">
             <strong>{t('authCreatePage')}</strong>
           </p>
         </div>
