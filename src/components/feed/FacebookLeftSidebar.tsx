@@ -126,7 +126,7 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
           <img 
             src="/fun-ecosystem-logo-36.webp" 
             alt="FUN Ecosystem" 
-            className="w-8 h-8 rounded-lg object-cover"
+            className="w-8 h-8 rounded-full object-cover"
           />
           <h3 className="font-bold text-lg text-yellow-500 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]">
             {t('funEcosystem')}
@@ -165,7 +165,7 @@ export const FacebookLeftSidebar = ({ onItemClick }: FacebookLeftSidebarProps) =
                   width={36}
                   height={36}
                   loading="lazy"
-                  className="w-9 h-9 rounded-lg object-cover group-hover:shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-shadow duration-300"
+                  className="w-9 h-9 rounded-full object-cover group-hover:shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-shadow duration-300"
                 />
               )}
               <span className={`font-medium text-sm transition-colors duration-300 ${

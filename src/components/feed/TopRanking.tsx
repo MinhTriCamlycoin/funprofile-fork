@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
-import { getNavbarLogoUrl } from "@/lib/staticImageOptimizer";
+// Use direct paths for logos to ensure consistency across all environments
 
 interface LeaderboardUser {
   id: string;
@@ -107,7 +107,7 @@ export const TopRanking = memo(() => {
           <div className="inline-block">
             <div className="relative">
               <img
-                src={getNavbarLogoUrl('/fun-profile-logo-40.webp')}
+                src="/fun-profile-logo-40.webp"
                 alt="Fun Profile Web3"
                 width={48}
                 height={48}

@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Users, FileText, Image, Video, BadgeDollarSign, Coins } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
-import { getNavbarLogoUrl } from '@/lib/staticImageOptimizer';
+// Use direct paths for logos to ensure consistency across all environments
 
 // Token logos
 import camlyLogo from '@/assets/tokens/camly-logo.webp';
@@ -193,7 +193,7 @@ export const AppHonorBoard = memo(() => {
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
             <img 
-              src={getNavbarLogoUrl('/fun-profile-logo-40.webp')} 
+              src="/fun-profile-logo-40.webp" 
               alt="Fun Profile Web3" 
               width={40} 
               height={40} 
