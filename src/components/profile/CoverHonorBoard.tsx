@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowUp, MessageCircle, Star, Share2, BadgeDollarSign, Coins, Gift, Wallet, Users, Image, Video, Calendar } from 'lucide-react';
 import { useRewardCalculation, REWARD_CONFIG } from '@/hooks/useRewardCalculation';
-import { getNavbarLogoUrl } from '@/lib/staticImageOptimizer';
+// Use direct paths for logos to ensure consistency across all environments
 
 interface CoverHonorBoardProps {
   userId: string;
@@ -95,9 +95,9 @@ export const CoverHonorBoard = ({ userId, username, avatarUrl }: CoverHonorBoard
             {/* Header - Logo and Title on same line */}
             <div className="text-center mb-3">
               <div className="flex items-center justify-center gap-2 mb-1">
-                {/* Logo - optimized for display size */}
+                {/* Logo - use direct path for consistency across all environments */}
                 <img 
-                  src={getNavbarLogoUrl('/fun-profile-logo-40.webp')} 
+                  src="/fun-profile-logo-40.webp" 
                   alt="Fun Profile Web3"
                   className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-green-400/50 shadow-[0_0_20px_rgba(34,197,94,0.6)]"
                 />

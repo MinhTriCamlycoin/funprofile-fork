@@ -20,7 +20,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { FacebookLeftSidebar } from '@/components/feed/FacebookLeftSidebar';
-import { getNavbarLogoUrl } from '@/lib/staticImageOptimizer';
+// Use direct paths for logos to ensure consistency across all environments
 
 export const FacebookNavbar = () => {
   const navigate = useNavigate();
@@ -102,9 +102,9 @@ export const FacebookNavbar = () => {
             </Sheet>
           )}
 
-          {/* Logo - optimized for display size */}
+          {/* Logo - use direct path for consistency across all environments */}
           <img
-            src={getNavbarLogoUrl('/fun-profile-logo-40.webp')}
+            src="/fun-profile-logo-40.webp"
             alt="FUN Profile"
             width={36}
             height={36}

@@ -7,7 +7,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { Video, Search, MoreHorizontal } from 'lucide-react';
 import { AppHonorBoard } from './AppHonorBoard';
 import { TopRanking } from './TopRanking';
-import { getSponsoredLogoUrl } from '@/lib/staticImageOptimizer';
+// Use direct paths for logos to ensure consistency across all environments
 
 export const FacebookRightSidebar = memo(() => {
   const navigate = useNavigate();
@@ -43,8 +43,8 @@ export const FacebookRightSidebar = memo(() => {
     }
   };
 
-  // Memoize optimized logo URL
-  const sponsoredLogoUrl = useMemo(() => getSponsoredLogoUrl('/fun-profile-logo-128.webp'), []);
+  // Use direct path for logo - consistent across all environments
+  const sponsoredLogoUrl = '/fun-profile-logo-128.webp';
 
   return (
     <div className="space-y-4">

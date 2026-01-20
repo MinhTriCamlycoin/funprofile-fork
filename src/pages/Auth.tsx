@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { UnifiedAuthForm } from '@/components/auth/UnifiedAuthForm';
 import { useLanguage } from '@/i18n/LanguageContext';
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
-import { getAuthLogoUrl, getSponsoredLogoUrl } from '@/lib/staticImageOptimizer';
+// Use direct paths for logos to ensure consistency across all environments
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 
@@ -104,9 +104,9 @@ const Auth = () => {
         {/* Left Side - Branding */}
         <div className="text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
-            {/* LCP Image - optimized for display size, eager loading, high priority */}
+            {/* LCP Image - use direct path for consistency across all environments */}
             <img 
-              src={getAuthLogoUrl('/fun-profile-logo-40.webp')} 
+              src="/fun-profile-logo-128.webp" 
               alt="FUN Profile" 
               width={64} 
               height={64}
